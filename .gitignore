@@ -1,0 +1,18 @@
+node_modules/
+coverage/
+.DS_Store
+*.log
+dist/
+
+# Local WeChat settings and credentials must stay off GitHub.
+project.private.config.json
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Device/LAN preview links are temporary and not project source.
+artifacts/phone-preview-qr*

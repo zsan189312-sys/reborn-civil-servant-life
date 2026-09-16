@@ -1,0 +1,2036 @@
+{
+  "schemaVersion": 1,
+  "sourceFingerprint": "d9d039decbe64397a57e3424c4fd8c9a6fe92fb274fc8e47ff5a576162900025",
+  "eventCount": 176,
+  "careers": 1900,
+  "coverage": 9,
+  "calibration": {
+    "model": "uniform-random-player-choices",
+    "runs": 3000,
+    "endings": {
+      "criminal_conviction": 1507,
+      "clean_retirement": 867,
+      "disciplinary_exit": 285,
+      "high_office": 259,
+      "family_first": 23,
+      "public_legacy": 54,
+      "results_only": 5
+    },
+    "criminalConvictionRate": 0.5023,
+    "highOfficeRate": 0.0863
+  },
+  "missing": [],
+  "automaticTransfers": 6673,
+  "policies": [
+    {
+      "name": "first",
+      "runs": 100,
+      "meanYear": 28,
+      "meanRole": 2.77,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "high_office": 1,
+        "public_legacy": 98,
+        "family_first": 1
+      },
+      "meanStats": {
+        "ability": 88.1,
+        "performance": 41.4,
+        "trust": 99.5,
+        "integrity": 100,
+        "family": 59.7,
+        "health": 43
+      }
+    },
+    {
+      "name": "random",
+      "runs": 100,
+      "meanYear": 22.1,
+      "meanRole": 3.23,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "clean_retirement": 36,
+        "criminal_conviction": 55,
+        "high_office": 4,
+        "disciplinary_exit": 5
+      },
+      "meanStats": {
+        "ability": 70,
+        "performance": 56.6,
+        "trust": 51.9,
+        "integrity": 54.7,
+        "family": 52.3,
+        "health": 43.8
+      }
+    },
+    {
+      "name": "steady",
+      "runs": 100,
+      "meanYear": 25.1,
+      "meanRole": 4.32,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "clean_retirement": 51,
+        "criminal_conviction": 47,
+        "family_first": 1,
+        "disciplinary_exit": 1
+      },
+      "meanStats": {
+        "ability": 64.6,
+        "performance": 56.8,
+        "trust": 53.4,
+        "integrity": 61.5,
+        "family": 61.8,
+        "health": 56.5
+      }
+    },
+    {
+      "name": "family",
+      "runs": 100,
+      "meanYear": 27.6,
+      "meanRole": 1.32,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "family_first": 85,
+        "clean_retirement": 9,
+        "criminal_conviction": 6
+      },
+      "meanStats": {
+        "ability": 59.3,
+        "performance": 34.9,
+        "trust": 57.9,
+        "integrity": 91.7,
+        "family": 85,
+        "health": 64.4
+      }
+    },
+    {
+      "name": "health",
+      "runs": 100,
+      "meanYear": 28,
+      "meanRole": 1.31,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "clean_retirement": 46,
+        "family_first": 54
+      },
+      "meanStats": {
+        "ability": 60.8,
+        "performance": 32.3,
+        "trust": 38,
+        "integrity": 98.2,
+        "family": 76.6,
+        "health": 81.9
+      }
+    },
+    {
+      "name": "learning",
+      "runs": 100,
+      "meanYear": 28,
+      "meanRole": 3.58,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "public_legacy": 36,
+        "clean_retirement": 57,
+        "high_office": 6,
+        "family_first": 1
+      },
+      "meanStats": {
+        "ability": 99.9,
+        "performance": 43.9,
+        "trust": 78.3,
+        "integrity": 100,
+        "family": 59.8,
+        "health": 45.6
+      }
+    },
+    {
+      "name": "delivery",
+      "runs": 100,
+      "meanYear": 12.4,
+      "meanRole": 0.95,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "disciplinary_exit": 20,
+        "criminal_conviction": 76,
+        "results_only": 3,
+        "clean_retirement": 1
+      },
+      "meanStats": {
+        "ability": 59.3,
+        "performance": 71.2,
+        "trust": 42.2,
+        "integrity": 21.3,
+        "family": 43.2,
+        "health": 42.7
+      }
+    },
+    {
+      "name": "trust",
+      "runs": 100,
+      "meanYear": 28,
+      "meanRole": 2.03,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "public_legacy": 90,
+        "family_first": 9,
+        "high_office": 1
+      },
+      "meanStats": {
+        "ability": 74.7,
+        "performance": 36.9,
+        "trust": 100,
+        "integrity": 100,
+        "family": 65.3,
+        "health": 53.9
+      }
+    },
+    {
+      "name": "integrity",
+      "runs": 100,
+      "meanYear": 28,
+      "meanRole": 1.97,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "clean_retirement": 76,
+        "public_legacy": 23,
+        "family_first": 1
+      },
+      "meanStats": {
+        "ability": 92.2,
+        "performance": 37.5,
+        "trust": 71.5,
+        "integrity": 100,
+        "family": 58.9,
+        "health": 59.2
+      }
+    },
+    {
+      "name": "balanced",
+      "runs": 100,
+      "meanYear": 26.7,
+      "meanRole": 6.34,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "high_office": 56,
+        "family_first": 4,
+        "criminal_conviction": 21,
+        "clean_retirement": 18,
+        "public_legacy": 1
+      },
+      "meanStats": {
+        "ability": 77.4,
+        "performance": 63.4,
+        "trust": 70.6,
+        "integrity": 87.3,
+        "family": 65.9,
+        "health": 57.5
+      }
+    },
+    {
+      "name": "promotion",
+      "runs": 100,
+      "meanYear": 28,
+      "meanRole": 8.44,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "high_office": 85,
+        "public_legacy": 2,
+        "results_only": 12,
+        "clean_retirement": 1
+      },
+      "meanStats": {
+        "ability": 90.3,
+        "performance": 76.8,
+        "trust": 75,
+        "integrity": 99.9,
+        "family": 38.9,
+        "health": 39.8
+      }
+    },
+    {
+      "name": "longTerm",
+      "runs": 100,
+      "meanYear": 28,
+      "meanRole": 8.14,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "high_office": 84,
+        "results_only": 7,
+        "public_legacy": 9
+      },
+      "meanStats": {
+        "ability": 85.3,
+        "performance": 73.1,
+        "trust": 91.6,
+        "integrity": 99.9,
+        "family": 42.8,
+        "health": 43.5
+      }
+    },
+    {
+      "name": "overwork",
+      "runs": 100,
+      "meanYear": 12.4,
+      "meanRole": 1.25,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "disciplinary_exit": 19,
+        "criminal_conviction": 77,
+        "results_only": 4
+      },
+      "meanStats": {
+        "ability": 60.9,
+        "performance": 70.8,
+        "trust": 42.8,
+        "integrity": 21.6,
+        "family": 43.1,
+        "health": 40.1
+      }
+    },
+    {
+      "name": "burnout",
+      "runs": 100,
+      "meanYear": 18,
+      "meanRole": 2.98,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "criminal_conviction": 74,
+        "disciplinary_exit": 16,
+        "health_exit": 9,
+        "results_only": 1
+      },
+      "meanStats": {
+        "ability": 72.9,
+        "performance": 68.2,
+        "trust": 51.2,
+        "integrity": 23.1,
+        "family": 48.5,
+        "health": 20.7
+      }
+    },
+    {
+      "name": "healthExit",
+      "runs": 100,
+      "meanYear": 27.7,
+      "meanRole": 5.27,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "public_legacy": 25,
+        "health_exit": 22,
+        "clean_retirement": 20,
+        "high_office": 33
+      },
+      "meanStats": {
+        "ability": 88.8,
+        "performance": 57.7,
+        "trust": 82.8,
+        "integrity": 100,
+        "family": 45,
+        "health": 16.7
+      }
+    },
+    {
+      "name": "boundaryLoss",
+      "runs": 100,
+      "meanYear": 11.3,
+      "meanRole": 0.17,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "disciplinary_exit": 63,
+        "criminal_conviction": 37
+      },
+      "meanStats": {
+        "ability": 55.3,
+        "performance": 57.4,
+        "trust": 33.8,
+        "integrity": 10.5,
+        "family": 58.4,
+        "health": 56.6
+      }
+    },
+    {
+      "name": "departure",
+      "runs": 100,
+      "meanYear": 8,
+      "meanRole": 0.97,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "new_beginning": 100
+      },
+      "meanStats": {
+        "ability": 54.2,
+        "performance": 44.9,
+        "trust": 43.9,
+        "integrity": 56.7,
+        "family": 63.8,
+        "health": 62.5
+      }
+    },
+    {
+      "name": "specialist",
+      "runs": 100,
+      "meanYear": 26.3,
+      "meanRole": 5.54,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "high_office": 23,
+        "criminal_conviction": 33,
+        "clean_retirement": 35,
+        "family_first": 9
+      },
+      "meanStats": {
+        "ability": 77.8,
+        "performance": 57.7,
+        "trust": 64.8,
+        "integrity": 70.7,
+        "family": 62.6,
+        "health": 55
+      }
+    },
+    {
+      "name": "quiet",
+      "runs": 100,
+      "meanYear": 23.9,
+      "meanRole": 3.65,
+      "meanQuietYears": 0,
+      "repeatRate": 0,
+      "endings": {
+        "clean_retirement": 41,
+        "criminal_conviction": 55,
+        "disciplinary_exit": 3,
+        "high_office": 1
+      },
+      "meanStats": {
+        "ability": 62.3,
+        "performance": 55.3,
+        "trust": 50.6,
+        "integrity": 55.6,
+        "family": 52.6,
+        "health": 55.8
+      }
+    }
+  ],
+  "witnesses": {
+    "high_office": {
+      "seed": 10000,
+      "backgroundId": "community",
+      "policyName": "first",
+      "endingId": "high_office",
+      "roleIndex": 7,
+      "years": 28,
+      "stats": {
+        "ability": 100,
+        "performance": 57,
+        "trust": 100,
+        "integrity": 100,
+        "family": 58,
+        "health": 45
+      },
+      "distinct": 28,
+      "events": 28,
+      "assessments": 0,
+      "repeats": 0,
+      "quietYears": 0,
+      "automaticTransfers": 7,
+      "actions": [
+        {
+          "type": "choice",
+          "year": 1,
+          "eventId": "town_goose_at_door",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 2,
+          "eventId": "duty_clerk_missing_name",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 3,
+          "eventId": "life_old_friend",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 4,
+          "eventId": "followup_friend_tickets",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 5,
+          "eventId": "city_water_plan",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 6,
+          "eventId": "life_evening_course",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 7,
+          "eventId": "work_shared_room",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 8,
+          "eventId": "followup_room_trial",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 9,
+          "eventId": "followup_room_shared",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 10,
+          "eventId": "city_library_future",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 11,
+          "eventId": "work_school_gate_sixth_cart",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 12,
+          "eventId": "followup_library_use",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 13,
+          "eventId": "followup_library_schedule",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 14,
+          "eventId": "work_long_project",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 15,
+          "eventId": "city_open_data",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 16,
+          "eventId": "integrity_trunk_wine",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 17,
+          "eventId": "dept_natural_map_line",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 18,
+          "eventId": "life_move_house",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 19,
+          "eventId": "dept_data_watch",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 20,
+          "eventId": "integrity_tea_consultant",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 21,
+          "eventId": "crisis_family_watch",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 22,
+          "eventId": "province_short_meeting",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 23,
+          "eventId": "duty_deputy_governor_one_team",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 24,
+          "eventId": "integrity_wedding_ledger",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 25,
+          "eventId": "province_basin",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 26,
+          "eventId": "dept_environment_monitor_cat",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 27,
+          "eventId": "life_weekend_walk",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 28,
+          "eventId": "integrity_fishing_cooler",
+          "choiceIndex": 0
+        }
+      ]
+    },
+    "public_legacy": {
+      "seed": 10001,
+      "backgroundId": "study",
+      "policyName": "first",
+      "endingId": "public_legacy",
+      "roleIndex": 5,
+      "years": 28,
+      "stats": {
+        "ability": 85,
+        "performance": 39,
+        "trust": 100,
+        "integrity": 100,
+        "family": 51,
+        "health": 43
+      },
+      "distinct": 28,
+      "events": 28,
+      "assessments": 0,
+      "repeats": 0,
+      "quietYears": 0,
+      "automaticTransfers": 5,
+      "actions": [
+        {
+          "type": "choice",
+          "year": 1,
+          "eventId": "dept_clerk_red_packet",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 2,
+          "eventId": "work_live_bridge_comment",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 3,
+          "eventId": "life_father_short_video",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 4,
+          "eventId": "integrity_trunk_wine",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 5,
+          "eventId": "city_water_plan",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 6,
+          "eventId": "life_evening_course",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 7,
+          "eventId": "town_notice_wrong_group",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 8,
+          "eventId": "integrity_wedding_ledger",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 9,
+          "eventId": "life_weekend_walk",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 10,
+          "eventId": "city_library_future",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 11,
+          "eventId": "work_supplier_gift",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 12,
+          "eventId": "followup_gift_declared",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 13,
+          "eventId": "followup_library_use",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 14,
+          "eventId": "followup_library_schedule",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 15,
+          "eventId": "city_heat_wave",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 16,
+          "eventId": "integrity_fishing_cooler",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 17,
+          "eventId": "dept_lawyer_classmate",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 18,
+          "eventId": "life_public_clip",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 19,
+          "eventId": "dept_subordinate_tea_box",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 20,
+          "eventId": "integrity_phone_card",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 21,
+          "eventId": "life_midnight_deleted_message",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 22,
+          "eventId": "work_bad_dashboard",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 23,
+          "eventId": "work_long_project",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 24,
+          "eventId": "integrity_tea_consultant",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 25,
+          "eventId": "city_open_data",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 26,
+          "eventId": "crisis_inspection_notebook",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 27,
+          "eventId": "life_health_check",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 28,
+          "eventId": "work_public_hearing",
+          "choiceIndex": 0
+        }
+      ]
+    },
+    "family_first": {
+      "seed": 10027,
+      "backgroundId": "community",
+      "policyName": "first",
+      "endingId": "family_first",
+      "roleIndex": 2,
+      "years": 28,
+      "stats": {
+        "ability": 70,
+        "performance": 27,
+        "trust": 100,
+        "integrity": 100,
+        "family": 84,
+        "health": 58
+      },
+      "distinct": 28,
+      "events": 28,
+      "assessments": 0,
+      "repeats": 0,
+      "quietYears": 0,
+      "automaticTransfers": 2,
+      "actions": [
+        {
+          "type": "choice",
+          "year": 1,
+          "eventId": "work_rain_shelter",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 2,
+          "eventId": "town_water_group_4am",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 3,
+          "eventId": "life_weekend_walk",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 4,
+          "eventId": "integrity_trunk_wine",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 5,
+          "eventId": "city_heat_wave",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 6,
+          "eventId": "life_family_dinner",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 7,
+          "eventId": "followup_birthday_photo",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 8,
+          "eventId": "integrity_wedding_ledger",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 9,
+          "eventId": "life_old_friend",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 10,
+          "eventId": "followup_friend_tickets",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 11,
+          "eventId": "dept_housing_elevator",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 12,
+          "eventId": "integrity_phone_card",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 13,
+          "eventId": "crisis_anonymous_report",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 14,
+          "eventId": "town_wedding_exam_speaker",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 15,
+          "eventId": "city_water_plan",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 16,
+          "eventId": "integrity_fishing_cooler",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 17,
+          "eventId": "dept_forestry_monkey",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 18,
+          "eventId": "life_health_check",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 19,
+          "eventId": "work_team_burnout",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 20,
+          "eventId": "integrity_tea_consultant",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 21,
+          "eventId": "life_midnight_deleted_message",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 22,
+          "eventId": "crisis_banquet_bid_price",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 23,
+          "eventId": "town_notice_wrong_group",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 24,
+          "eventId": "life_hobby_group",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 25,
+          "eventId": "followup_band_stage",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 26,
+          "eventId": "dept_relief_warehouse",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 27,
+          "eventId": "life_old_house_key",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 28,
+          "eventId": "dept_natural_map_line",
+          "choiceIndex": 0
+        }
+      ]
+    },
+    "clean_retirement": {
+      "seed": 10000,
+      "backgroundId": "community",
+      "policyName": "random",
+      "endingId": "clean_retirement",
+      "roleIndex": 5,
+      "years": 28,
+      "stats": {
+        "ability": 84,
+        "performance": 51,
+        "trust": 73,
+        "integrity": 100,
+        "family": 58,
+        "health": 46
+      },
+      "distinct": 28,
+      "events": 28,
+      "assessments": 0,
+      "repeats": 0,
+      "quietYears": 0,
+      "automaticTransfers": 5,
+      "actions": [
+        {
+          "type": "choice",
+          "year": 1,
+          "eventId": "town_goose_at_door",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 2,
+          "eventId": "duty_clerk_missing_name",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 3,
+          "eventId": "life_old_friend",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 4,
+          "eventId": "followup_friend_tickets",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 5,
+          "eventId": "city_water_plan",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 6,
+          "eventId": "life_evening_course",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 7,
+          "eventId": "work_rain_shelter",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 8,
+          "eventId": "integrity_wedding_ledger",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 9,
+          "eventId": "life_move_house",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 10,
+          "eventId": "city_library_future",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 11,
+          "eventId": "work_muted_three_minutes",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 12,
+          "eventId": "followup_library_use",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 13,
+          "eventId": "followup_library_schedule",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 14,
+          "eventId": "county_friend_project",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 15,
+          "eventId": "followup_friend_project_disclosed",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 16,
+          "eventId": "integrity_trunk_wine",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 17,
+          "eventId": "dept_missing_child_live",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 18,
+          "eventId": "life_midnight_deleted_message",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 19,
+          "eventId": "dept_police_mascot",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 20,
+          "eventId": "integrity_tea_consultant",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 21,
+          "eventId": "crisis_family_watch",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 22,
+          "eventId": "city_last_bus",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 23,
+          "eventId": "dept_relative_case_call",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 24,
+          "eventId": "integrity_phone_card",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 25,
+          "eventId": "crisis_livestream_microphone",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 26,
+          "eventId": "crisis_banquet_bid_price",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 27,
+          "eventId": "life_weekend_walk",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 28,
+          "eventId": "integrity_fishing_cooler",
+          "choiceIndex": 1
+        }
+      ]
+    },
+    "criminal_conviction": {
+      "seed": 10002,
+      "backgroundId": "career_change",
+      "policyName": "random",
+      "endingId": "criminal_conviction",
+      "roleIndex": 2,
+      "years": 18,
+      "stats": {
+        "ability": 74,
+        "performance": 61,
+        "trust": 45,
+        "integrity": 30,
+        "family": 52,
+        "health": 48
+      },
+      "distinct": 18,
+      "events": 18,
+      "assessments": 0,
+      "repeats": 0,
+      "quietYears": 0,
+      "automaticTransfers": 2,
+      "actions": [
+        {
+          "type": "choice",
+          "year": 1,
+          "eventId": "work_old_records",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 2,
+          "eventId": "town_notice_wrong_group",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 3,
+          "eventId": "life_old_friend",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 4,
+          "eventId": "followup_friend_tickets",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 5,
+          "eventId": "crisis_livestream_microphone",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 6,
+          "eventId": "life_hobby_group",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 7,
+          "eventId": "dept_agri_homestay_tractor",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 8,
+          "eventId": "integrity_wedding_ledger",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 9,
+          "eventId": "life_evening_course",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 10,
+          "eventId": "city_heat_wave",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 11,
+          "eventId": "work_live_bridge_comment",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 12,
+          "eventId": "integrity_trunk_wine",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 13,
+          "eventId": "dept_charity_nameplate",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 14,
+          "eventId": "dept_eldercare_bid",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 15,
+          "eventId": "city_library_future",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 16,
+          "eventId": "integrity_phone_card",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 17,
+          "eventId": "integrity_joint_inquiry",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 18,
+          "eventId": "integrity_public_judgment",
+          "choiceIndex": 1
+        }
+      ]
+    },
+    "disciplinary_exit": {
+      "seed": 10015,
+      "backgroundId": "community",
+      "policyName": "random",
+      "endingId": "disciplinary_exit",
+      "roleIndex": 3,
+      "years": 28,
+      "stats": {
+        "ability": 70,
+        "performance": 63,
+        "trust": 38,
+        "integrity": 43,
+        "family": 45,
+        "health": 63
+      },
+      "distinct": 28,
+      "events": 28,
+      "assessments": 0,
+      "repeats": 0,
+      "quietYears": 0,
+      "automaticTransfers": 3,
+      "actions": [
+        {
+          "type": "choice",
+          "year": 1,
+          "eventId": "town_goose_at_door",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 2,
+          "eventId": "work_accessible_path",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 3,
+          "eventId": "life_midnight_deleted_message",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 4,
+          "eventId": "integrity_trunk_wine",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 5,
+          "eventId": "crisis_livestream_microphone",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 6,
+          "eventId": "life_old_friend",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 7,
+          "eventId": "followup_friend_tickets",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 8,
+          "eventId": "integrity_wedding_ledger",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 9,
+          "eventId": "life_evening_course",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 10,
+          "eventId": "city_heat_wave",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 11,
+          "eventId": "dept_agri_drone_goat",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 12,
+          "eventId": "integrity_phone_card",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 13,
+          "eventId": "work_public_budget",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 14,
+          "eventId": "dept_market_wedding_leftovers",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 15,
+          "eventId": "city_library_future",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 16,
+          "eventId": "integrity_fishing_cooler",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 17,
+          "eventId": "dept_market_influencer_shoes",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 18,
+          "eventId": "life_move_house",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 19,
+          "eventId": "work_bad_dashboard",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 20,
+          "eventId": "integrity_tea_consultant",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 21,
+          "eventId": "crisis_family_watch",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 22,
+          "eventId": "crisis_anonymous_report",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 23,
+          "eventId": "crisis_banquet_bid_price",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 24,
+          "eventId": "life_weekend_walk",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 25,
+          "eventId": "city_open_data",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 26,
+          "eventId": "work_live_bridge_comment",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 27,
+          "eventId": "life_public_clip",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 28,
+          "eventId": "crisis_hotel_keycard",
+          "choiceIndex": 2
+        }
+      ]
+    },
+    "results_only": {
+      "seed": 10027,
+      "backgroundId": "community",
+      "policyName": "delivery",
+      "endingId": "results_only",
+      "roleIndex": 0,
+      "years": 28,
+      "stats": {
+        "ability": 65,
+        "performance": 96,
+        "trust": 62,
+        "integrity": 27,
+        "family": 56,
+        "health": 34
+      },
+      "distinct": 28,
+      "events": 28,
+      "assessments": 0,
+      "repeats": 0,
+      "quietYears": 0,
+      "automaticTransfers": 3,
+      "actions": [
+        {
+          "type": "choice",
+          "year": 1,
+          "eventId": "work_rain_shelter",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 2,
+          "eventId": "town_water_group_4am",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 3,
+          "eventId": "life_weekend_walk",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 4,
+          "eventId": "integrity_trunk_wine",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 5,
+          "eventId": "city_heat_wave",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 6,
+          "eventId": "life_family_dinner",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 7,
+          "eventId": "followup_birthday_candle",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 8,
+          "eventId": "integrity_wedding_ledger",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 9,
+          "eventId": "life_old_friend",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 10,
+          "eventId": "followup_friend_tickets",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 11,
+          "eventId": "duty_deputy_county_ward",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 12,
+          "eventId": "integrity_phone_card",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 13,
+          "eventId": "work_bad_dashboard",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 14,
+          "eventId": "crisis_banquet_bid_price",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 15,
+          "eventId": "city_open_data",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 16,
+          "eventId": "integrity_fishing_cooler",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 17,
+          "eventId": "town_key_in_trunk",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 18,
+          "eventId": "life_old_house_key",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 19,
+          "eventId": "town_last_bus_seat",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 20,
+          "eventId": "integrity_tea_consultant",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 21,
+          "eventId": "life_evening_course",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 22,
+          "eventId": "work_old_records",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 23,
+          "eventId": "town_empty_chair",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 24,
+          "eventId": "followup_chair_next_time",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 25,
+          "eventId": "city_water_plan",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 26,
+          "eventId": "crisis_inspection_route",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 27,
+          "eventId": "life_public_clip",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 28,
+          "eventId": "dept_clerk_red_packet",
+          "choiceIndex": 0
+        }
+      ]
+    },
+    "health_exit": {
+      "seed": 10013,
+      "backgroundId": "study",
+      "policyName": "burnout",
+      "endingId": "health_exit",
+      "roleIndex": 3,
+      "years": 24,
+      "stats": {
+        "ability": 84,
+        "performance": 80,
+        "trust": 66,
+        "integrity": 31,
+        "family": 54,
+        "health": 10
+      },
+      "distinct": 24,
+      "events": 24,
+      "assessments": 0,
+      "repeats": 0,
+      "quietYears": 0,
+      "automaticTransfers": 4,
+      "actions": [
+        {
+          "type": "choice",
+          "year": 1,
+          "eventId": "work_live_bridge_comment",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 2,
+          "eventId": "work_quiet_market",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 3,
+          "eventId": "life_midnight_deleted_message",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 4,
+          "eventId": "integrity_trunk_wine",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 5,
+          "eventId": "city_heat_wave",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 6,
+          "eventId": "life_public_clip",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 7,
+          "eventId": "work_bad_dashboard",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 8,
+          "eventId": "integrity_wedding_ledger",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 9,
+          "eventId": "life_family_group_promise",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 10,
+          "eventId": "crisis_livestream_microphone",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 11,
+          "eventId": "dept_data_grandma_face",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 12,
+          "eventId": "integrity_phone_card",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 13,
+          "eventId": "work_public_budget",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 14,
+          "eventId": "work_accessible_path",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 15,
+          "eventId": "city_open_data",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 16,
+          "eventId": "integrity_fishing_cooler",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 17,
+          "eventId": "county_after_photo",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 18,
+          "eventId": "life_health_check",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 19,
+          "eventId": "crisis_inspection_notebook",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 20,
+          "eventId": "integrity_tea_consultant",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 21,
+          "eventId": "life_father_short_video",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 22,
+          "eventId": "work_rain_shelter",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 23,
+          "eventId": "crisis_three_dinner_tables",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 24,
+          "eventId": "life_hobby_group",
+          "choiceIndex": 2
+        }
+      ]
+    },
+    "new_beginning": {
+      "seed": 10000,
+      "backgroundId": "community",
+      "policyName": "departure",
+      "endingId": "new_beginning",
+      "roleIndex": 1,
+      "years": 8,
+      "stats": {
+        "ability": 44,
+        "performance": 45,
+        "trust": 50,
+        "integrity": 54,
+        "family": 71,
+        "health": 58
+      },
+      "distinct": 7,
+      "events": 7,
+      "assessments": 0,
+      "repeats": 0,
+      "quietYears": 0,
+      "automaticTransfers": 1,
+      "actions": [
+        {
+          "type": "choice",
+          "year": 1,
+          "eventId": "town_goose_at_door",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 2,
+          "eventId": "duty_clerk_missing_name",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 3,
+          "eventId": "life_old_friend",
+          "choiceIndex": 2
+        },
+        {
+          "type": "choice",
+          "year": 4,
+          "eventId": "followup_favor_review",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 5,
+          "eventId": "followup_friend_boundary",
+          "choiceIndex": 0
+        },
+        {
+          "type": "choice",
+          "year": 6,
+          "eventId": "life_evening_course",
+          "choiceIndex": 1
+        },
+        {
+          "type": "choice",
+          "year": 7,
+          "eventId": "work_shared_room",
+          "choiceIndex": 2
+        },
+        {
+          "type": "leave",
+          "year": 8
+        }
+      ]
+    }
+  },
+  "threeCareerRepeat": [
+    {
+      "policyName": "first",
+      "careers": 3,
+      "ordinaryDraws": 70,
+      "unique": 45,
+      "repeatRate": 0.357
+    },
+    {
+      "policyName": "random",
+      "careers": 3,
+      "ordinaryDraws": 66,
+      "unique": 46,
+      "repeatRate": 0.303
+    },
+    {
+      "policyName": "balanced",
+      "careers": 3,
+      "ordinaryDraws": 73,
+      "unique": 46,
+      "repeatRate": 0.37
+    }
+  ],
+  "rolePools": [
+    {
+      "name": "青禾镇科员",
+      "ordinaryWork": 19,
+      "conditionalWork": 17
+    },
+    {
+      "name": "青禾镇民政办负责人",
+      "ordinaryWork": 28,
+      "conditionalWork": 17
+    },
+    {
+      "name": "青禾镇党委委员、副镇长",
+      "ordinaryWork": 41,
+      "conditionalWork": 17
+    },
+    {
+      "name": "云岑县市场监管局副局长",
+      "ordinaryWork": 29,
+      "conditionalWork": 15
+    },
+    {
+      "name": "云岑县委政法委副书记",
+      "ordinaryWork": 31,
+      "conditionalWork": 15
+    },
+    {
+      "name": "澄川市公安局副局长",
+      "ordinaryWork": 27,
+      "conditionalWork": 16
+    },
+    {
+      "name": "澄川市发展改革委主任",
+      "ordinaryWork": 41,
+      "conditionalWork": 14
+    },
+    {
+      "name": "栖原省生态环境厅副厅长",
+      "ordinaryWork": 21,
+      "conditionalWork": 16
+    },
+    {
+      "name": "栖原省交通运输厅厅长",
+      "ordinaryWork": 20,
+      "conditionalWork": 15
+    },
+    {
+      "name": "栖原省委常委、副省长",
+      "ordinaryWork": 45,
+      "conditionalWork": 15
+    },
+    {
+      "name": "国家层面综合协调岗位副职",
+      "ordinaryWork": 8,
+      "conditionalWork": 14
+    }
+  ]
+}

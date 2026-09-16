@@ -1,0 +1,13 @@
+{
+  "name": "reborn-civil-servant-life-minigame",
+  "version": "0.1.0",
+  "private": true,
+  "description": "《重生之我是公务员的一生》微信小游戏内部原型",
+  "scripts": {
+    "preview": "node scripts/preview-server.js",
+    "simulate": "node scripts/simulate.js --write",
+    "test": "node --test tests/*.test.js",
+    "check": "node --check game.js && node scripts/validate-content.js && npm test"
+  },
+  "license": "UNLICENSED"
+}

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>重生之我是公务员的一生 · 本机试玩</title>
+  <link rel="stylesheet" href="/preview.css">
+</head>
+<body>
+  <main>
+    <aside>
+      <p class="eyebrow">重生之我是公务员的一生 / 内部体验</p>
+      <h1>重生一次，<br>重走仕途。</h1>
+      <p>重回公务员录用那年，从乡镇科员开始。是安稳一生，还是一步步走向更高职位？人物与地区虚构，通用职务称谓仅用于游戏叙事。</p>
+      <label for="device">预览屏幕</label>
+      <select id="device">
+        <option value="320x568">320 × 568 · 小屏手机</option>
+        <option value="360x800">360 × 800 · 安卓窄屏</option>
+        <option value="375x667">375 × 667 · 苹果小屏</option>
+        <option value="390x844">390 × 844 · 苹果常规屏</option>
+        <option value="393x852" selected>393 × 852 · 常规手机</option>
+        <option value="412x915">412 × 915 · 安卓大屏</option>
+        <option value="430x932">430 × 932 · 苹果大屏</option>
+      </select>
+      <p class="hint">点击作出选择；在画面内拖动或滚动查看完整内容。进度保存在本浏览器，与微信存档独立。</p>
+      <p class="hint">此页面仅在本机运行。微信真机兼容性仍需在开发者工具验证。</p>
+      <p id="error" role="alert"></p>
+    </aside>
+    <section aria-label="游戏试玩">
+      <canvas id="game" aria-label="重生之我是公务员的一生游戏画布，请使用鼠标或触摸操作"></canvas>
+    </section>
+  </main>
+  <script src="/preview.js"></script>
+  <script src="/bundle.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+{
+  "description": "《重生之我是公务员的一生》微信小游戏内部原型；发布前必须完成合规闸门",
+  "compileType": "game",
+  "libVersion": "3.6.5",
+  "projectname": "重生之我是公务员的一生",
+  "appid": "wxaa230e0fddc4f8c6",
+  "setting": {
+    "useCompilerPlugins": false,
+    "es6": true,
+    "minified": false,
+    "postcss": true,
+    "compileHotReLoad": true,
+    "urlCheck": true,
+    "compileWorklet": false,
+    "uglifyFileName": false,
+    "uploadWithSourceMap": true,
+    "enhance": false,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "minifyWXSS": true,
+    "minifyWXML": true,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "condition": false,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
+  },
+  "simulatorPluginLibVersion": {},
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "isGameTourist": false,
+  "editorSetting": {}
+}
