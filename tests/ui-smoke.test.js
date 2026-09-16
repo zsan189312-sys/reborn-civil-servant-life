@@ -624,3 +624,56 @@ test("failed storage does not crash play, and replacing a save requires confirma
   app.buttons.find((button) => button.label === "确认").onPress();
   assert.equal(app.state.backgroundId, "study");
 });
+
+test("foreground return repaints the open story and a window change re-fits the layout", (t) => {
+  const handlers = {};
+  let metrics = { windowWidth: 320, windowHeight: 568, pixelRatio: 2, safeArea: { top: 24, bottom: 548 } };
+  let stored = null;
+  global.wx = {
+    getWindowInfo: () => metrics,
+    getStorageSync: () => stored,
+    setStorageSync: (_key, value) => { stored = value; },
+    onTouchStart(handler) { handlers.start = handler; },
+    onTouchEnd(handler) { handlers.end = handler; },
+    onShow(handler) { handlers.show = handler; },
+    onHide(handler) { handlers.hide = handler; },
+    onWindowResize(handler) { handlers.resize = handler; }
+  };
+  t.after(() => { delete global.wx; });
+  const ctx = createContext();
+  const painted = [];
+  ctx.fillText = (value, x, y) => painted.push({ value: String(value), x, y });
+  const { GameApp } = require("../src/ui/app");
+  const app = new GameApp({ getContext: () => ctx });
+  app.startGame("community");
+  app.panel = null;
+  app.render();
+
+  assert.equal(typeof handlers.show, "function", "onShow is registered");
+  assert.equal(typeof handlers.resize, "function", "onWindowResize is registered");
+  assert.equal(app.state.phase, "event");
+  const eventId = app.state.currentEventId;
+
+  painted.length = 0;
+  handlers.show();
+  assert.ok(painted.length > 0, "returning to the foreground repainted the frame");
+  assert.equal(app.state.currentEventId, eventId, "the open story was kept");
+  assert.equal(app.screen, "play");
+
+  // A touch interrupted by backgrounding must not turn into a tap afterwards.
+  handlers.start({ touches: [{ clientX: 12, clientY: 12 }] });
+  handlers.hide();
+  painted.length = 0;
+  handlers.end({ changedTouches: [{ clientX: 12, clientY: 12 }] });
+  assert.equal(painted.length, 0, "the interrupted gesture did nothing");
+
+  // A window-metric change must re-fit the canvas and every button.
+  metrics = { windowWidth: 430, windowHeight: 932, pixelRatio: 3, safeArea: { top: 59, bottom: 898 } };
+  handlers.resize();
+  assert.equal(app.width, 430);
+  assert.equal(app.pixelRatio, 3);
+  assert.ok(app.buttons.length > 0);
+  for (const button of app.buttons) {
+    assert.ok(button.x >= 0 && button.x + button.width <= 430, button.label);
+  }
+});

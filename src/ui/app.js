@@ -97,23 +97,14 @@ class GameApp {
   constructor(canvas) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
-    this.metrics = platform.getWindowMetrics();
-    this.width = this.metrics.width;
-    this.viewportHeight = this.metrics.height;
-    this.topInset = (this.metrics.safeArea ? this.metrics.safeArea.top : 0) + 44;
-    this.bottomInset = this.metrics.safeArea ? Math.max(0, this.viewportHeight - this.metrics.safeArea.bottom) : 0;
-    this.height = Math.max(708, this.viewportHeight - this.topInset - this.bottomInset);
     this.scrollY = 0;
-    this.contentHeight = this.height;
     this.panel = null;
     this.notice = "";
-    this.pixelRatio = this.metrics.pixelRatio;
-    this.canvas.width = Math.round(this.width * this.pixelRatio);
-    this.canvas.height = Math.round(this.viewportHeight * this.pixelRatio);
-    this.context.scale(this.pixelRatio, this.pixelRatio);
     this.buttons = [];
     this.screen = "home";
     this.state = null;
+    this.gesture = null;
+    this.applyMetrics();
     this.savedGame = platform.loadGame();
     this.archive = platform.loadArchive();
     if (!validateSavedGame(this.savedGame)) {
@@ -139,7 +130,39 @@ class GameApp {
     platform.onTouchMove((event) => this.handleMove(event));
     platform.onTouchEnd((event) => this.handleEnd(event));
     platform.onTouchCancel(() => { this.gesture = null; });
+    // Returning to the foreground or a window-metric change can leave a stale
+    // or blank frame (and can move the safe area) while a story is open.
+    platform.onShow(() => this.handleResume());
+    platform.onWindowResize(() => this.handleResume());
+    platform.onHide(() => { this.gesture = null; });
     this.render();
+  }
+
+  // Re-read the device metrics and resize the backing canvas. Assigning
+  // canvas.width also resets the 2D transform, so the pixel-ratio scale is
+  // applied exactly once per call.
+  applyMetrics() {
+    this.metrics = platform.getWindowMetrics();
+    this.width = this.metrics.width;
+    this.viewportHeight = this.metrics.height;
+    this.topInset = (this.metrics.safeArea ? this.metrics.safeArea.top : 0) + 44;
+    this.bottomInset = this.metrics.safeArea ? Math.max(0, this.viewportHeight - this.metrics.safeArea.bottom) : 0;
+    this.height = Math.max(708, this.viewportHeight - this.topInset - this.bottomInset);
+    this.pixelRatio = this.metrics.pixelRatio;
+    this.canvas.width = Math.round(this.width * this.pixelRatio);
+    this.canvas.height = Math.round(this.viewportHeight * this.pixelRatio);
+    this.context.scale(this.pixelRatio, this.pixelRatio);
+    this.contentHeight = this.height;
+  }
+
+  handleResume() {
+    // Drop any half-finished gesture so a touch interrupted by backgrounding
+    // cannot register as a tap after the player comes back.
+    this.gesture = null;
+    this.applyMetrics();
+    this.render();
+    const clamped = Math.max(0, Math.min(this.scrollY, this.maxScroll()));
+    if (clamped !== this.scrollY) { this.scrollY = clamped; this.render(); }
   }
 
   handleTouch(event) {

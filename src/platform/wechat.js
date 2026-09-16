@@ -108,15 +108,35 @@ function setPreferredFramesPerSecond(value) {
   if (api && api.setPreferredFramesPerSecond) api.setPreferredFramesPerSecond(value);
 }
 
+// Lifecycle hooks. Each is optional so the browser preview shim and the unit
+// test doubles keep working without implementing them.
+function onShow(handler) {
+  const api = getWx();
+  if (api && api.onShow) api.onShow(handler);
+}
+
+function onHide(handler) {
+  const api = getWx();
+  if (api && api.onHide) api.onHide(handler);
+}
+
+function onWindowResize(handler) {
+  const api = getWx();
+  if (api && api.onWindowResize) api.onWindowResize(handler);
+}
+
 module.exports = {
   clearGame,
   getWindowMetrics,
   loadGame,
   loadArchive,
+  onHide,
+  onShow,
   onTouchStart,
   onTouchMove,
   onTouchEnd,
   onTouchCancel,
+  onWindowResize,
   saveGame,
   setPreferredFramesPerSecond
 };
