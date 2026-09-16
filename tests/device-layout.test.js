@@ -117,3 +117,62 @@ test("annual dashboard keeps its hierarchy and content inside mainstream phone w
     assert.ok(primary.y < actions.find((button) => button.label.startsWith("03  ")).y);
   }
 });
+
+// Every authored story page is exercised at every supported width. Long natural
+// language titles used to be drawn on a single line and overflowed 320px
+// screens; the event page was not covered by the older matrix.
+test("every event page keeps its title, body and choices inside the screen", (t) => {
+  const { EVENTS } = require("../src/data/events");
+  const devices = [
+    [320, 568, 24, 548],
+    [360, 800, 32, 776],
+    [375, 667, 20, 647],
+    [390, 844, 47, 810],
+    [393, 852, 59, 818],
+    [412, 915, 24, 891],
+    [430, 932, 59, 898]
+  ];
+  t.after(() => { delete global.wx; });
+  const { GameApp } = require("../src/ui/app");
+
+  for (const [width, height, safeTop, safeBottom] of devices) {
+    const draws = [];
+    global.wx = {
+      getWindowInfo: () => ({ windowWidth: width, windowHeight: height, pixelRatio: 3, safeArea: { top: safeTop, bottom: safeBottom } }),
+      getStorageSync: () => null, setStorageSync() {}, onTouchStart() {}, setPreferredFramesPerSecond() {}
+    };
+    const app = new GameApp({ getContext: () => layoutContext(draws) });
+    app.startGame("community");
+
+    for (const event of EVENTS) {
+      app.state = {
+        ...app.state,
+        phase: "event",
+        currentEventId: event.id,
+        roleIndex: event.roleLevels[0],
+        appointment: null,
+        startOfYearResults: [],
+        queue: []
+      };
+      app.panel = null;
+      app.screen = "play";
+      draws.length = 0;
+      app.render();
+
+      for (const draw of draws) {
+        const textWidth = measuredWidth(draw);
+        const left = draw.align === "right" ? draw.x - textWidth : draw.align === "center" ? draw.x - textWidth / 2 : draw.x;
+        const right = draw.align === "right" ? draw.x : draw.align === "center" ? draw.x + textWidth / 2 : draw.x + textWidth;
+        assert.ok(left >= -0.5 && right <= width + 0.5, `${width}px ${event.id}: "${draw.value}"`);
+      }
+      for (const button of app.buttons) {
+        assert.ok(button.x >= 0 && button.x + button.width <= width, `${width}px ${event.id}: ${button.label}`);
+      }
+      // The title must be fully rendered (wrapped), never truncated. Title
+      // glyphs are the only text drawn at 19px or larger on this page.
+      const titleText = draws.filter((draw) => draw.size >= 19).map((draw) => draw.value).join("");
+      assert.equal(titleText, event.title, `${width}px ${event.id}: title not fully drawn`);
+      assert.ok(app.maxScroll() >= 0);
+    }
+  }
+});

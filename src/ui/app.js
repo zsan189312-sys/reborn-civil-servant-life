@@ -935,13 +935,20 @@ class GameApp {
     if (!event) return;
     const top = 206;
     const body = compactNarrative(event.body, 82);
+    // Long story titles are authored in natural language. Drawing them on one
+    // line overflowed narrow (320px) screens, so titles now scale down and
+    // wrap, and the card grows to fit the measured title height.
+    const titleSize = event.title.length > 16 ? 19 : event.title.length > 12 ? 21 : 23;
+    const titleLineHeight = titleSize + 5;
+    const titleLines = this.measureWrappedLines(event.title, this.width - 68, titleSize).length;
     const bodyLines = this.measureWrappedLines(body, this.width - 68, 15).length;
-    const cardHeight = Math.max(208, 92 + bodyLines * 25 + 14);
+    const bodyTop = top + 60 + titleLines * titleLineHeight + 6;
+    const cardHeight = Math.max(208, (bodyTop - top) + bodyLines * 25 + 14);
     this.roundedRect(16, top, this.width - 32, cardHeight, 15, COLORS.paper, COLORS.line);
     const categoryLabel = event.contentTag || { work: "工作事项", life: "生活片段", city: "城市事件", integrity: "廉洁考察", assessment: "旧版考察收尾" }[event.category];
     this.text(categoryLabel, 34, top + 28, 12, COLORS.gold, "left", "600");
-    this.text(event.title, 34, top + 60, 23, COLORS.ink, "left", "700");
-    this.wrapText(body, 34, top + 92, this.width - 68, 25, 15, COLORS.ink);
+    this.wrapText(event.title, 34, top + 60, this.width - 68, titleLineHeight, titleSize, COLORS.ink);
+    this.wrapText(body, 34, bodyTop, this.width - 68, 25, 15, COLORS.ink);
 
     let y = top + cardHeight + 20;
     const previous = event.afterEvent && this.state.history.slice().reverse().find((item) => item.eventId === event.afterEvent.id);
