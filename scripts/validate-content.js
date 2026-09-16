@@ -4,6 +4,7 @@ const { EVENTS } = require("../src/data/events");
 const { ENDINGS } = require("../src/data/endings");
 const { ATTRIBUTES, ROLES } = require("../src/core/constants");
 const { CASE_STATUSES } = require("../src/core/accountability");
+const { HIGH_POST_EVENT_PREFIXES, outOfPostScope } = require("../src/core/engine");
 
 // These names are not blanket bans. Flag context for human review; generic
 // institutions and accurate leadership levels are part of the product theme.
@@ -91,13 +92,23 @@ EVENTS.forEach((event) => {
   });
 });
 
-if (ENDINGS.length !== 9) fail("当前设计要求恰好 9 个主结局");
-if (new Set(ENDINGS.map((ending) => ending.id)).size !== ENDINGS.length) fail("结局 ID 重复");
+if (ENDINGS.length !== 9) fail("当前设计要求恰好 9 个主结局");if (new Set(ENDINGS.map((ending) => ending.id)).size !== ENDINGS.length) fail("结局 ID 重复");
 if (!ENDINGS.every((ending) => ending.title && ending.description && ending.story)) fail("结局缺少标题、说明或故事收尾");
 
 const counts = EVENTS.reduce((result, event) => {
   result[event.category] = (result[event.category] || 0) + 1;
   return result;
 }, {});
+
+// Data/rule drift guard. An event that declares roleLevels 7+ but whose id is
+// outside the high-post whitelist can never be drawn at any post it claims to
+// cover. This is authored content that is silently unreachable, so surface it
+// for an explicit content decision instead of letting it sit in the pool.
+const orphanedAtHighPost = EVENTS.filter((event) =>
+  event.roleLevels.some((level) => level >= 7) && outOfPostScope(event, 7));
+if (orphanedAtHighPost.length) {
+  process.stderr.write(`[review] ${orphanedAtHighPost.length} 条工作/区域事件把岗位范围写到 7 级以上，但当前高岗位白名单（${HIGH_POST_EVENT_PREFIXES.join(" / ")}）永远抽不到它们；要么收窄 roleLevels，要么把 id 改入白名单或补 broadScope 支持：\n`);
+  orphanedAtHighPost.forEach((event) => process.stderr.write(`[review]   ${event.id} roleLevels=[${event.roleLevels.join(",")}] 起止层级=${event.roleLevels.filter((level) => level >= 7).join(",")}\n`));
+}
 
 process.stdout.write(`内容校验通过：${EVENTS.length} 个事件（工作 ${counts.work || 0}、生活 ${counts.life || 0}、城市 ${counts.city || 0}、廉洁考察 ${counts.integrity || 0}、晋升考察 ${counts.assessment || 0}），${ENDINGS.length} 个结局。\n`);

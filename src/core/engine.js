@@ -119,6 +119,20 @@ function createNewGame(backgroundId, seed = Date.now()) {
   };
 }
 
+// Province, governor and national posts must not replay grass-roots execution
+// scenes. The authored rule is expressed as an explicit id-prefix whitelist so
+// it stays reviewable in one place; scripts/validate-content.js reuses this
+// predicate to flag any event whose declared roleLevels reach 7+ while the
+// whitelist would never let it be drawn (authored content silently wasted).
+const HIGH_POST_EVENT_PREFIXES = ["province_", "national_", "duty_", "dept_"];
+
+function outOfPostScope(event, roleIndex) {
+  if (roleIndex < 7) return false;
+  if (!["work", "city"].includes(event.category)) return false;
+  if (event.requiresFlags) return false;
+  return !HIGH_POST_EVENT_PREFIXES.some((prefix) => event.id.startsWith(prefix));
+}
+
 function eligibleEvents(state, events, category) {
   // `seen` is a fast lookup cache, but old saves and tabs can contain a
   // complete history with a missing/stale cache entry.  For one-off stories,
@@ -137,8 +151,7 @@ function eligibleEvents(state, events, category) {
     }
     if (event.id === "life_move_house" && getLifeState(state).housing !== "rental") return false;
     if (!event.roleLevels.includes(state.roleIndex)) return false;
-    if (state.roleIndex >= 7 && ["work", "city"].includes(event.category) && !event.requiresFlags &&
-      !event.id.startsWith("province_") && !event.id.startsWith("national_") && !event.id.startsWith("duty_") && !event.id.startsWith("dept_")) return false;
+    if (outOfPostScope(event, state.roleIndex)) return false;
     if (event.minYear && state.careerYear < event.minYear) return false;
     if (event.maxYear && state.careerYear > event.maxYear) return false;
     if (event.once && (state.seen[event.id] !== undefined || historicalEventIds.has(event.id))) return false;
@@ -153,8 +166,7 @@ function eligibleEvents(state, events, category) {
   });
 }
 
-const STORY_THEME_RULES = [
-  ["case-boundary", /案情|案件|办案|笔录|侦查|审判|法院|检察|报警/],
+const STORY_THEME_RULES = [  ["case-boundary", /案情|案件|办案|笔录|侦查|审判|法院|检察|报警/],
   ["gift-benefit", /礼盒|礼品|红包|购物卡|转账|现金|酒|宴请|饭局|请吃|土特产/],
   ["project-procurement", /招标|投标|评审|供应方|分包|承包|验收|工程|项目/],
   ["records-data", /档案|材料|报表|报告|清单|台账|数字|名单|签字|纪要/],
@@ -734,6 +746,8 @@ module.exports = {
   promotionChoice,
   promotionActionReason,
   PROMOTION_MOVES,
+  HIGH_POST_EVENT_PREFIXES,
+  outOfPostScope,
   needsAssessment,
   setPromotionChoice,
   repairLegacyPacing,
