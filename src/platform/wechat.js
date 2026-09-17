@@ -87,6 +87,33 @@ function clearGame() {
   }
 }
 
+// Small device-local settings that must survive with no game in progress, for
+// example whether the player has seen the first-run privacy notice. Kept on a
+// separate key so deleting the save never resurrects the notice needlessly.
+const SETTINGS_KEY = "yizhi-lvli-civil-service-v2-settings";
+
+function loadSettings() {
+  const api = getWx();
+  if (!api) return {};
+  try {
+    const record = api.getStorageSync(SETTINGS_KEY);
+    return record && typeof record === "object" ? record : {};
+  } catch (_error) {
+    return {};
+  }
+}
+
+function saveSettings(settings) {
+  const api = getWx();
+  if (!api) return false;
+  try {
+    api.setStorageSync(SETTINGS_KEY, settings);
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
 function onTouchMove(handler) {
   const api = getWx();
   if (api && api.onTouchMove) api.onTouchMove(handler);
@@ -134,6 +161,7 @@ module.exports = {
   getWindowMetrics,
   loadGame,
   loadArchive,
+  loadSettings,
   onHide,
   onShow,
   onTouchStart,
@@ -142,5 +170,6 @@ module.exports = {
   onTouchCancel,
   onWindowResize,
   saveGame,
+  saveSettings,
   setPreferredFramesPerSecond
 };

@@ -47,6 +47,22 @@ const TRANSFER_LABELS = { automatic: "年终组织评定", legacy: "旧版年度
 // The wording is fixed by the platform; do not paraphrase or shorten it.
 const HEALTH_ADVICE = "抵制不良游戏，拒绝盗版游戏。注意自我保护，谨防受骗上当。适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。";
 
+// Age rating shown before play (platform rule 11.3). Change this single value
+// if the platform requires a different band.
+const AGE_RATING = "适龄提示：本游戏适合 16 周岁以上用户";
+
+// The game collects nothing and has no network calls, so the notice states
+// that plainly instead of reusing a generic template that overstates it.
+const PRIVACY_VERSION = 1;
+const PRIVACY_NOTICE = [
+  "本游戏为单机小游戏。",
+  "收集的信息：不收集姓名、手机号、身份证号、位置、通讯录、相册、麦克风或任何个人身份信息。",
+  "使用的设备能力：仅读取屏幕尺寸与安全区用于排版，读取触摸事件用于操作，使用本机存储保存游戏进度与结局收藏。",
+  "数据存储与删除：进度仅保存在你的设备上，不上传、不联网、不与第三方共享。可在游戏内删除本地数据，或删除小游戏清除。",
+  "广告与支付：当前版本不含广告、充值或任何交易。将来若接入，将只使用平台官方能力，并在接入前更新本说明。",
+  "未成年人：请结合适龄提示合理安排游戏时间。"
+];
+
 const CAREER_STAGES = [
   "基层起步", "基层历练", "副科履新", "副科历练", "正科主政",
   "县处历练", "市级主政", "厅局履新", "厅局主政", "综合领导", "全局协调"
@@ -129,6 +145,10 @@ class GameApp {
           : pacingRepaired ? "旧存档已切换为一年一个主故事。" : "旧存档已更新。";
       }
     }
+    this.settings = platform.loadSettings();
+    // Douyin rule 11.3 and the general privacy requirement: the notice must be
+    // shown before play, once per device (and again if the wording changes).
+    if (this.settings.privacyVersion !== PRIVACY_VERSION) this.panel = { id: "privacy" };
     platform.setPreferredFramesPerSecond(30);
     platform.onTouchStart((event) => this.handleTouch(event));
     platform.onTouchMove((event) => this.handleMove(event));
@@ -286,6 +306,7 @@ class GameApp {
     if (this.panel.id === "promotion") { this.renderPromotionPanel(); return; }
     if (this.panel.id === "accounts") { this.renderAccountsPanel(); return; }
     if (this.panel.id === "collection") { this.renderCollection(); return; }
+    if (this.panel.id === "privacy") { this.renderPrivacy(); return; }
     if (this.panel.id === "confirm") {
       const lines = this.wrapText(this.panel.message, 28, 148, this.width - 56, 28, 17, COLORS.ink);
       const confirmY = Math.max(266, 148 + lines * 28 + 24);
@@ -822,10 +843,11 @@ class GameApp {
     // directly above the entry buttons instead of below the fold.
     const adviceTop = 358;
     const adviceLines = this.measureWrappedLines(HEALTH_ADVICE, this.width - 84, 11).length;
-    const adviceHeight = 36 + adviceLines * 17;
+    const adviceHeight = 36 + adviceLines * 17 + 22;
     this.roundedRect(28, adviceTop, this.width - 56, adviceHeight, 12, COLORS.paper, COLORS.line);
     this.text("健康游戏忠告", 42, adviceTop + 20, 12, COLORS.gold, "left", "600");
     this.wrapText(HEALTH_ADVICE, 42, adviceTop + 38, this.width - 84, 17, 11, COLORS.muted);
+    this.text(AGE_RATING, 42, adviceTop + 38 + adviceLines * 17 + 4, 11, COLORS.tealDark, "left", "600");
 
     let firstY = adviceTop + adviceHeight + 20;
     if (this.savedGame) {
@@ -856,6 +878,25 @@ class GameApp {
     this.text("人物剧情虚构 · 多部门履历 · 游戏化调任", centerX, footerTop + 19, 11, COLORS.muted, "center");
     // The advice block can push the footer past a short viewport; let it scroll.
     this.contentHeight = Math.max(this.height, footerTop + 44);
+  }
+
+  // First-run privacy notice. The game collects nothing, so this is a plain
+  // disclosure rather than a consent gate that blocks play.
+  renderPrivacy() {
+    this.text("隐私说明", 24, 122, 22, COLORS.ink, "left", "600");
+    let y = 160;
+    PRIVACY_NOTICE.forEach((line) => {
+      const lines = this.wrapText(line, 28, y, this.width - 56, 22, 13, COLORS.muted);
+      y += lines * 22 + 10;
+    });
+    const buttonY = Math.max(320, y + 18);
+    this.button("我已了解，开始游戏", 28, buttonY, this.width - 56, 54, () => {
+      this.settings = { ...this.settings, privacyVersion: PRIVACY_VERSION };
+      platform.saveSettings(this.settings);
+      this.panel = null;
+      this.render();
+    });
+    this.contentHeight = Math.max(this.height, buttonY + 74);
   }
 
   renderBackgrounds() {

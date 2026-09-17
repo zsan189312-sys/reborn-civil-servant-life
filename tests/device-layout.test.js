@@ -201,6 +201,9 @@ test("the start screen publishes the full healthy-game advisory on every width",
       getStorageSync: () => null, setStorageSync() {}, onTouchStart() {}, setPreferredFramesPerSecond() {}
     };
     const app = new GameApp({ getContext: () => layoutContext(draws) });
+    // A fresh install shows the privacy notice before the start screen.
+    const ack = app.buttons.find((button) => button.label === "我已了解，开始游戏");
+    if (ack) ack.onPress();
     draws.length = 0;
     app.render();
 

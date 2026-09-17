@@ -32,6 +32,13 @@ function createContext() {
   };
 }
 
+// A fresh install shows the privacy notice before anything else, so tests that
+// start from the home or background screen have to acknowledge it first.
+function dismissPrivacy(app) {
+  const ack = app.buttons.find((button) => button.label === "我已了解，开始游戏");
+  if (ack) ack.onPress();
+}
+
 function finishAnnualWork(state, engine, events) {
   let next = state;
   while (["event", "result"].includes(next.phase)) {
@@ -155,6 +162,7 @@ test("entry labels guide all backgrounds and saved phases without restarting pro
   for (const background of BACKGROUNDS) {
     stored = null;
     const app = new GameApp({ getContext: () => ctx });
+    dismissPrivacy(app);
     app.screen = "background"; app.render();
     assert.ok(painted.join("").includes("选择你的前世经历"));
     app.startGame(background.id);
@@ -530,6 +538,7 @@ test("canvas UI can start a new game and make a choice", () => {
   const canvas = { width: 0, height: 0, getContext: () => createContext() };
   const { GameApp } = require("../src/ui/app");
   const app = new GameApp(canvas);
+  dismissPrivacy(app);
 
   assert.equal(app.screen, "home");
   assert.ok(touchHandler);
