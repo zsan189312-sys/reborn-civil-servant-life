@@ -176,3 +176,54 @@ test("every event page keeps its title, body and choices inside the screen", (t)
     }
   }
 });
+
+// 《微信小游戏运营规范》2.6.2 requires the full healthy-game advisory to be
+// published prominently before the game starts.
+const HEALTH_ADVICE = "抵制不良游戏，拒绝盗版游戏。注意自我保护，谨防受骗上当。适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。";
+
+test("the start screen publishes the full healthy-game advisory on every width", (t) => {
+  const devices = [
+    [320, 568, 24, 548],
+    [360, 800, 32, 776],
+    [375, 667, 20, 647],
+    [390, 844, 47, 810],
+    [393, 852, 59, 818],
+    [412, 915, 24, 891],
+    [430, 932, 59, 898]
+  ];
+  t.after(() => { delete global.wx; });
+  const { GameApp } = require("../src/ui/app");
+
+  for (const [width, height, safeTop, safeBottom] of devices) {
+    const draws = [];
+    global.wx = {
+      getWindowInfo: () => ({ windowWidth: width, windowHeight: height, pixelRatio: 3, safeArea: { top: safeTop, bottom: safeBottom } }),
+      getStorageSync: () => null, setStorageSync() {}, onTouchStart() {}, setPreferredFramesPerSecond() {}
+    };
+    const app = new GameApp({ getContext: () => layoutContext(draws) });
+    draws.length = 0;
+    app.render();
+
+    const painted = draws.map((draw) => draw.value).join("");
+    assert.ok(painted.includes("健康游戏忠告"), `${width}px: missing the advisory heading`);
+    const adviceText = draws.filter((draw) => draw.size === 11 && HEALTH_ADVICE.includes(draw.value)).map((draw) => draw.value).join("");
+    assert.equal(adviceText, HEALTH_ADVICE, `${width}px: the advisory must be published in full`);
+
+    for (const draw of draws) {
+      const textWidth = measuredWidth(draw);
+      const left = draw.align === "right" ? draw.x - textWidth : draw.align === "center" ? draw.x - textWidth / 2 : draw.x;
+      const right = draw.align === "right" ? draw.x : draw.align === "center" ? draw.x + textWidth / 2 : draw.x + textWidth;
+      assert.ok(left >= -0.5 && right <= width + 0.5, `${width}px: "${draw.value}"`);
+    }
+    for (const button of app.buttons) {
+      assert.ok(button.x >= 0 && button.x + button.width <= width, `${width}px: ${button.label}`);
+    }
+
+    // The advisory must sit above the entry button, not below the fold.
+    const entry = app.buttons.find((button) => button.label === "重回录用那一年");
+    assert.ok(entry, `${width}px: missing the entry button`);
+    const adviceDraw = draws.find((draw) => HEALTH_ADVICE.includes(draw.value) && draw.size === 11);
+    assert.ok(adviceDraw.y < entry.y, `${width}px: the advisory must precede the entry button`);
+    assert.ok(app.maxScroll() >= 0);
+  }
+});

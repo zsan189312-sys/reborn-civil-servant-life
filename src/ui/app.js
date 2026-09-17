@@ -43,6 +43,10 @@ const COLORS = {
 
 const TRANSFER_LABELS = { automatic: "年终组织评定", legacy: "旧版年度考核" };
 
+// 《微信小游戏运营规范》2.6.2：游戏开始前必须在画面显著位置全文登载《健康游戏忠告》。
+// The wording is fixed by the platform; do not paraphrase or shorten it.
+const HEALTH_ADVICE = "抵制不良游戏，拒绝盗版游戏。注意自我保护，谨防受骗上当。适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。";
+
 const CAREER_STAGES = [
   "基层起步", "基层历练", "副科履新", "副科历练", "正科主政",
   "县处历练", "市级主政", "厅局履新", "厅局主政", "综合领导", "全局协调"
@@ -814,29 +818,44 @@ class GameApp {
       COLORS.muted
     );
 
-    const firstY = this.savedGame ? 385 : 410;
+    // 《健康游戏忠告》must be legible before the game starts, so it sits
+    // directly above the entry buttons instead of below the fold.
+    const adviceTop = 358;
+    const adviceLines = this.measureWrappedLines(HEALTH_ADVICE, this.width - 84, 11).length;
+    const adviceHeight = 36 + adviceLines * 17;
+    this.roundedRect(28, adviceTop, this.width - 56, adviceHeight, 12, COLORS.paper, COLORS.line);
+    this.text("健康游戏忠告", 42, adviceTop + 20, 12, COLORS.gold, "left", "600");
+    this.wrapText(HEALTH_ADVICE, 42, adviceTop + 38, this.width - 84, 17, 11, COLORS.muted);
+
+    let firstY = adviceTop + adviceHeight + 20;
     if (this.savedGame) {
       const role = ROLES[this.savedGame.roleIndex];
-      this.text(role.name, centerX, firstY - 11, 13, COLORS.gold, "center", "600");
-      this.button(`继续第 ${this.savedGame.careerYear} 年`, 34, firstY, this.width - 68, 54, () => this.continueGame());
-      this.button("开始新的履历", 34, firstY + 68, this.width - 68, 50, () => {
+      this.text(role.name, centerX, firstY + 11, 13, COLORS.gold, "center", "600");
+      this.button(`继续第 ${this.savedGame.careerYear} 年`, 34, firstY + 24, this.width - 68, 54, () => this.continueGame());
+      this.button("开始新的履历", 34, firstY + 92, this.width - 68, 50, () => {
         this.screen = "background";
         this.render();
       }, { secondary: true });
+      firstY += 142;
     } else {
-      this.button("重回录用那一年", 34, firstY, this.width - 68, 56, () => {
+      this.button("重回录用那一年", 34, firstY + 24, this.width - 68, 56, () => {
         this.screen = "background";
         this.render();
       });
+      firstY += 88;
     }
 
-    this.button(`结局收藏 · ${new Set(this.archive.map((item) => item.endingId)).size} / ${ENDINGS.length}`, 34, 536, this.width - 68, 48, () => {
+    const collectionY = firstY + 14;
+    this.button(`结局收藏 · ${new Set(this.archive.map((item) => item.endingId)).size} / ${ENDINGS.length}`, 34, collectionY, this.width - 68, 48, () => {
       this.panel = { id: "collection" };
       this.render();
     }, { secondary: true });
 
-    this.text("内部原型 · 本地存档 · 无广告与充值", centerX, this.height - 42, 11, COLORS.muted, "center");
-    this.text("人物剧情虚构 · 多部门履历 · 游戏化调任", centerX, this.height - 23, 11, COLORS.muted, "center");
+    const footerTop = collectionY + 62;
+    this.text("内部原型 · 本地存档 · 无广告与充值", centerX, footerTop, 11, COLORS.muted, "center");
+    this.text("人物剧情虚构 · 多部门履历 · 游戏化调任", centerX, footerTop + 19, 11, COLORS.muted, "center");
+    // The advice block can push the footer past a short viewport; let it scroll.
+    this.contentHeight = Math.max(this.height, footerTop + 44);
   }
 
   renderBackgrounds() {
