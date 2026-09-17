@@ -18,8 +18,12 @@ function archiveFrom(record) {
   return migrated.filter((item, index) => migrated.findIndex((candidate) => candidate.endingId === item.endingId) === index).slice(-24);
 }
 
+// WeChat exposes wx.*, Douyin exposes tt.*. Both expose the same storage,
+// window, touch and lifecycle surface used here, so one adapter serves both.
 function getWx() {
-  return typeof wx === "undefined" ? null : wx;
+  if (typeof wx !== "undefined") return wx;
+  if (typeof tt !== "undefined") return tt;
+  return null;
 }
 
 function getWindowMetrics() {
