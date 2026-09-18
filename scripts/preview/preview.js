@@ -18,6 +18,11 @@ window.wx = {
   onTouchMove: (handler) => { handlers.move = handler; },
   onTouchEnd: (handler) => { handlers.end = handler; },
   onTouchCancel: (handler) => { handlers.cancel = handler; },
+  // Mirror the WeChat lifecycle so the browser preview exercises the same
+  // foreground/resize repaint path a real device uses.
+  onShow: (handler) => { document.addEventListener("visibilitychange", () => { if (!document.hidden) handler(); }); },
+  onHide: (handler) => { document.addEventListener("visibilitychange", () => { if (document.hidden) handler(); }); },
+  onWindowResize: (handler) => { window.addEventListener("resize", () => handler()); },
   setPreferredFramesPerSecond() {}
 };
 function point(event) {

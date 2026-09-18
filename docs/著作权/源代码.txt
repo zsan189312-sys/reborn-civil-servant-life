@@ -1,0 +1,3078 @@
+重生之我是公务员的一生（游戏软件） V1.0    第 1 页
+/* ===== 文件：game.js ===== */
+"use strict";
+
+const { GameApp } = require("./src/ui/app");
+
+// The same entry runs on WeChat (wx.*) and Douyin (tt.*). The platform
+// adapter in src/platform/wechat.js resolves whichever global is present.
+const api = typeof wx !== "undefined" ? wx : typeof tt !== "undefined" ? tt : null;
+
+if (!api) {
+  throw new Error("《重生之我是公务员的一生》需要在小游戏环境中运行（微信开发者工具或抖音开发者工具）");
+}
+
+const canvas = api.createCanvas();
+new GameApp(canvas);
+
+/* ===== 文件：src/platform/wechat.js ===== */
+"use strict";
+
+// Keep the superseded fictional-career prototype intact under its original key.
+const SAVE_KEY = "yizhi-lvli-civil-service-v2";
+const { ENDINGS, migrateEndingId } = require("../data/endings");
+const { ROLES, MAX_CAREER_YEARS } = require("../core/constants");
+
+function archiveFrom(record) {
+  if (!record || record.format !== "local-profile-v2" || !Array.isArray(record.archive)) return [];
+  const migrated = record.archive.flatMap((item) => {
+    if (!item || typeof item.id !== "string") return [];
+    const endingId = migrateEndingId(item.endingId);
+    if (!ENDINGS.some((ending) => ending.id === endingId) || !Number.isInteger(item.year) ||
+      item.year < 1 || item.year > MAX_CAREER_YEARS || !Number.isInteger(item.roleIndex) ||
+      !ROLES[item.roleIndex] || !Number.isFinite(item.assets)) return [];
+    return [{ ...item, endingId }];
+  });
+  return migrated.filter((item, index) => migrated.findIndex((candidate) => candidate.endingId === item.endingId) === index).slice(-24);
+}
+
+// WeChat exposes wx.*, Douyin exposes tt.*. Both expose the same storage,
+// window, touch and lifecycle surface used here, so one adapter serves both.
+function getWx() {
+  if (typeof wx !== "undefined") return wx;
+  if (typeof tt !== "undefined") return tt;
+  return null;
+}
+
+function getWindowMetrics() {
+  const api = getWx();
+  if (!api) return { width: 375, height: 667, pixelRatio: 2, safeArea: null };
+  const info = api.getWindowInfo ? api.getWindowInfo() : api.getSystemInfoSync();
+  return {
+
+重生之我是公务员的一生（游戏软件） V1.0    第 2 页
+    width: info.windowWidth,
+    height: info.windowHeight,
+    pixelRatio: info.pixelRatio || 1,
+    safeArea: info.safeArea || null
+  };
+}
+
+function saveGame(state) {
+  const api = getWx();
+  if (!api) return false;
+  try {
+    const archive = archiveFrom(api.getStorageSync(SAVE_KEY));
+    if (state.phase === "ending") {
+      const id = `${state.backgroundId}:${state.seed}:${state.careerYear}:${state.endingId}`;
+      if (!archive.some((item) => item.endingId === state.endingId)) archive.push({
+        id, endingId: state.endingId, year: state.careerYear, roleIndex: state.roleIndex, assets: state.assets
+      });
+    }
+    // One storage write commits progress and the collection together.
+    api.setStorageSync(SAVE_KEY, { format: "local-profile-v2", state, archive: archive.slice(-24) });
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function loadGame() {
+  const api = getWx();
+  if (!api) return null;
+  try {
+    const record = api.getStorageSync(SAVE_KEY);
+    const state = record && record.format === "local-profile-v2" ? record.state : record || null;
+    if (state && state.phase === "ending") return { ...state, endingId: migrateEndingId(state.endingId) };
+    return state;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function loadArchive() {
+  const api = getWx();
+  if (!api) return [];
+  try { return archiveFrom(api.getStorageSync(SAVE_KEY)); } catch (_error) { return []; }
+}
+
+function clearGame() {
+  const api = getWx();
+  try {
+    if (!api) return false;
+    api.removeStorageSync(SAVE_KEY);
+
+重生之我是公务员的一生（游戏软件） V1.0    第 3 页
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function onTouchMove(handler) {
+  const api = getWx();
+  if (api && api.onTouchMove) api.onTouchMove(handler);
+}
+
+function onTouchEnd(handler) {
+  const api = getWx();
+  if (api && api.onTouchEnd) api.onTouchEnd(handler);
+}
+
+function onTouchCancel(handler) {
+  const api = getWx();
+  if (api && api.onTouchCancel) api.onTouchCancel(handler);
+}
+
+function onTouchStart(handler) {
+  const api = getWx();
+  if (api) api.onTouchStart(handler);
+}
+
+function setPreferredFramesPerSecond(value) {
+  const api = getWx();
+  if (api && api.setPreferredFramesPerSecond) api.setPreferredFramesPerSecond(value);
+}
+
+// Lifecycle hooks. Each is optional so the browser preview shim and the unit
+// test doubles keep working without implementing them.
+function onShow(handler) {
+  const api = getWx();
+  if (api && api.onShow) api.onShow(handler);
+}
+
+function onHide(handler) {
+  const api = getWx();
+  if (api && api.onHide) api.onHide(handler);
+}
+
+function onWindowResize(handler) {
+  const api = getWx();
+  if (api && api.onWindowResize) api.onWindowResize(handler);
+}
+
+module.exports = {
+  clearGame,
+
+重生之我是公务员的一生（游戏软件） V1.0    第 4 页
+  getWindowMetrics,
+  loadGame,
+  loadArchive,
+  onHide,
+  onShow,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+  onTouchCancel,
+  onWindowResize,
+  saveGame,
+  setPreferredFramesPerSecond
+};
+
+/* ===== 文件：src/core/constants.js ===== */
+"use strict";
+
+const ATTRIBUTES = ["ability", "performance", "trust", "integrity", "family", "health"];
+
+const ATTRIBUTE_LABELS = {
+  ability: "能力",
+  performance: "政绩",
+  trust: "民望",
+  integrity: "廉洁",
+  family: "家庭",
+  health: "健康"
+};
+
+const ROLES = [
+  { name: "青禾镇科员", department: "党政办公室", level: null, post: "青禾镇党政办公室一级科员", scope: "青禾镇", entryMode: "录用", responsibility: "走访核实、材料流转和群众诉求，不替领导或业务部门越权拍板", threshold: 50, minPerformance: 44, minIntegrity: 45, minYears: 1, annualIncome: 7 },
+  { name: "青禾镇民政办负责人", department: "民政办公室", level: null, post: "青禾镇民政办公室负责人、四级主任科员", scope: "青禾镇", entryMode: "内部轮岗", responsibility: "负责救助、养老和基层民生事项的核验协调，重大资金事项按程序报审", threshold: 54, minPerformance: 46, minIntegrity: 48, minYears: 1, annualIncome: 8 },
+  { name: "青禾镇党委委员、副镇长", department: "镇政府（农业农村、应急）", level: "乡科级副职", post: "青禾镇党委委员、副镇长", scope: "青禾镇", entryMode: "提拔", responsibility: "分管农业农村、项目建设和应急协调，重大事项提交集体研究，不替专业部门越权处置", threshold: 58, minPerformance: 50, minIntegrity: 50, minYears: 1, annualIncome: 10 },
+  { name: "云岑县市场监管局副局长", department: "县市场监督管理局", level: "乡科级副职", post: "云岑县市场监督管理局党组成员、副局长", scope: "云岑县", entryMode: "跨部门调任", responsibility: "分管食品药品、价格与经营秩序监管，检查和处罚必须依事实与法定程序办理", threshold: 60, minPerformance: 50, minIntegrity: 50, minYears: 1, annualIncome: 12 },
+  { name: "云岑县委政法委副书记", department: "县委政法委", level: "乡科级正职", post: "云岑县委政法委副书记", scope: "云岑县", entryMode: "提拔", responsibility: "协调政法单位和基层治理工作，维护依法履职边界，不对具体案件结果发指令", threshold: 62, minPerformance: 52, minIntegrity: 54, minYears: 1, annualIncome: 15 },
+  { name: "澄川市公安局副局长", department: "市公安局", level: "县处级副职", post: "澄川市公安局党委委员、副局长", scope: "澄川市", entryMode: "跨部门调任并提拔", responsibility: "按分工组织公共安全和执法监督，具体案件由办案单位依法办理；游戏默认已履行必要任职资格程序", threshold: 68, minPerformance: 59, minIntegrity: 60, minYears: 1, annualIncome: 18 },
+  { name: "澄川市发展改革委主任", department: "市发展和改革委员会", level: "县处级正职", post: "澄川市发展和改革委员会党组书记、主任", scope: "澄川市", entryMode: "跨部门转任", responsibility: "统筹发展规划、重大项目和公共资源安排，论证与审批各守边界，不拿规划给关系项目开绿灯", threshold: 68, minPerformance: 58, minIntegrity: 60, minYears: 1, annualIncome: 22 },
+  { name: "栖原省生态环境厅副厅长", department: "省生态环境厅", level: "厅局级副职", post: "栖原省生态环境厅党组成员、副厅长", scope: "栖原省", entryMode: "调任并提拔", responsibility: "统筹跨市污染治理、环境监测与执法协同，让监测数据和整改责任经得起复核", threshold: 78, minPerformance: 68, minIntegrity: 70, minYears: 2, annualIncome: 26 },
+  { name: "栖原省交通运输厅厅长", department: "省交通运输厅", level: "厅局级正职", post: "栖原省交通运输厅党组书记、厅长", scope: "栖原省", entryMode: "跨部门转任", responsibility: "统筹综合交通、重点工程和应急保通，对项目安全、资金使用和区域公平承担组织责任", threshold: 82, minPerformance: 72, minIntegrity: 74, minYears: 2, annualIncome: 30 },
+  { name: "栖原省委常委、副省长", department: "省政府（综合分工）", level: "省部级副职", post: "栖原省委常委、副省长", scope: "栖原省", entryMode: "提拔", responsibility: "按分工统筹发展改革、应急、生态与民生等跨部门事项，坚持集体决策，不替法定机关作具体结论", threshold: 86, minPerformance: 76, minIntegrity: 78, minYears: 2, annualIncome: 34 },
+  { name: "国家层面综合协调岗位副职", department: "跨区域综合协调（虚构）", level: "国家级副职", post: "国家层面综合协调岗位副职（虚构）", scope: "跨区域", entryMode: "交流任职并提拔", responsibility: "围绕跨区域重大议题提出统筹方案、协调执行边界并督促评估，不对应现实中的特定机关或个人", threshold: 101, minPerformance: 0, minIntegrity: 0, minYears: 99, annualIncome: 38 }
+];
+
+// Names follow the published general-management rank sequence. They confer no leadership duty.
+const CIVIL_RANKS = ["二级科员", "一级科员", "四级主任科员", "三级主任科员", "二级主任科员", "一级主任科员", "四级调研员", "三级调研员", "二级调研员", "一级调研员", "二级巡视员", "一级巡视员"];
+// Minimum rank corresponding to township through prefecture leadership levels.
+const LEADERSHIP_MIN_RANK = [1, 2, 4, 6, 8, 10, 11];
+const ALL_ROLE_LEVELS = ROLES.map((_role, index) => index);
+
+const BACKGROUNDS = [
+  {
+
+重生之我是公务员的一生（游戏软件） V1.0    第 5 页
+    id: "community",
+    name: "重生前：基层老科员",
+    description: "熟悉群众工作，曾因业务短板错过提拔。",
+    effects: { ability: -4, trust: 10, family: 5 }
+  },
+  {
+    id: "study",
+    name: "重生前：机关笔杆子",
+    description: "材料写得好，却总把陪伴和健康留到以后。",
+    effects: { ability: 12, health: -6, family: -4 }
+  },
+  {
+    id: "career_change",
+    name: "重生前：中途离职者",
+    description: "离开过体制，这次更懂自己想守住什么。",
+    effects: { ability: 6, health: 5, trust: -5 }
+  }
+];
+
+const START_AGE = 22;
+const MAX_CAREER_YEARS = 28;
+const SAVE_VERSION = 2;
+
+module.exports = {
+  ATTRIBUTES,
+  ATTRIBUTE_LABELS,
+  BACKGROUNDS,
+  MAX_CAREER_YEARS,
+  ROLES,
+  SAVE_VERSION,
+  CIVIL_RANKS, LEADERSHIP_MIN_RANK, ALL_ROLE_LEVELS, START_AGE
+};
+
+/* ===== 文件：src/core/random.js ===== */
+"use strict";
+
+function normalizeSeed(seed) {
+  const value = Number(seed) >>> 0;
+  return value === 0 ? 0x6d2b79f5 : value;
+}
+
+function nextRandom(seed) {
+  let value = normalizeSeed(seed);
+  value += 0x6d2b79f5;
+  let mixed = value;
+  mixed = Math.imul(mixed ^ (mixed >>> 15), mixed | 1);
+  mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
+  const random = ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
+  return { seed: value >>> 0, value: random };
+}
+
+重生之我是公务员的一生（游戏软件） V1.0    第 6 页
+
+function pick(seed, items) {
+  if (!items.length) throw new Error("Cannot pick from an empty list");
+  const result = nextRandom(seed);
+  return {
+    seed: result.seed,
+    item: items[Math.floor(result.value * items.length)]
+  };
+}
+
+module.exports = { nextRandom, normalizeSeed, pick };
+
+
+/* ===== 文件：src/core/life.js ===== */
+"use strict";
+
+const { MAX_CAREER_YEARS, ROLES } = require("./constants");
+const { homeFunding, spendHousingFund, money } = require("./accounts");
+
+// All prices and effects below are fictional game values, not market or policy data.
+const HOUSING = { rental: "普通租住", near: "近单位租住", owned: "自有住房" };
+const RELATIONSHIPS = { single: "暂无伴侣", dating: "稳定交往", married: "已组建家庭" };
+const ACTIONS = [
+  { id: "meet", name: "认真认识一个人", cost: 1, description: "全年社交与约会预算；开始稳定交往，家庭 +2。", effects: { family: 2 }, outcome: "朋友介绍你认识林溪。聊了半天，对方问的不是你在哪个单位，而是你休息时喜欢做什么。你竟卡了一下。后来约了几次，你们认真聊过，决定试着一起往前走。" },
+  { id: "marry", name: "一起组建家庭", cost: 8, description: "稳定交往满一个年度后可安排。家庭 +5。", effects: { family: 5 }, outcome: "你们把预算摊在桌上，删掉了几项‘别人家都有’的安排。最后留下的东西不算多，却都是两个人真想要的。钥匙旁边，从此多了一串钥匙。" },
+  { id: "child", name: "迎接一个孩子", cost: 3, description: "成家后的下一年度起可选，本版最多一个孩子。一次性准备费 3 万，另从本年起到孩子 17 岁每年支出 2 万；家庭 +4、健康 -2。均为游戏预算。", effects: { family: 4, health: -2 }, outcome: "你们给孩子起了个小名，叫小满。家里添了许多很小的东西：小碗、小袜子，还有一盏夜里不再关掉的灯。你曾把日程表排得密不透风，现在却发现，最重要的事有时根本不按日程来。" },
+  { id: "reunite", name: "安排一次团聚", cost: 2, description: "用于两地生活；家庭 +4、健康 -1，不自动结束异地。", effects: { family: 4, health: -1 }, outcome: "你们提前订好了相聚的日子。见面后并没有安排什么大事，只逛了趟菜市场。回程还是要各走各的，但下一次见面的日期，已经写进了日历。" },
+  { id: "car", name: "购置代步车", cost: 12, description: "一次性付清；以后每年养车支出 +2，通勤更灵活。", effects: { health: 2 }, outcome: "你把车停进车位，来回确认了两遍。家人问第一站去哪，你想了想，说先去买菜。车钥匙很轻，每年的养车预算倒不会跟着变轻。" },
+  { id: "home", name: "购置自住住房", cost: 50, description: "一次性付清；不设贷款，每年基础居住支出 -1。", effects: { family: 4 }, outcome: "交接结束，你在空屋里站了一会儿。没有豪华装修，也没有想象中的背景音乐。你先量了窗边的位置，打算在那里放一张真正能坐下来吃饭的桌子。" },
+  { id: "rest", name: "给身体放一段假", cost: 1, description: "健康 +6、政绩 -1；每年只能选择一项人生安排。", effects: { health: 6, performance: -1 }, outcome: "你提前交接好工作，把闹钟关了。第一天还是按上班时间醒来，盯着天花板愣了几秒，才想起来今天不用赶路。" }
+];
+
+function createLifeState() {
+  return { housing: "rental", vehicle: false, relationship: "single", relationshipSince: 0, child: null, longDistance: false, relocationPending: false, lastActionYear: 0, actions: [] };
+}
+
+function getLifeState(state) {
+  if (state.life) return { child: null, ...JSON.parse(JSON.stringify(state.life)) };
+  const life = createLifeState();
+  // Infer only facts actually recorded in old saves, never fabricate purchases or marriage.
+  for (const item of state.history || []) {
+    if (item.eventId === "life_move_house" && item.choiceIndex === 0) life.housing = "near";
+    if (item.eventId === "life_family_choice") {
+      life.relationship = "dating";
+      life.relationshipSince = item.year;
+      if (item.choiceIndex === 0) life.longDistance = true;
+      if (item.choiceIndex === 2) life.relocationPending = true;
+    }
+  }
+  return life;
+
+重生之我是公务员的一生（游戏软件） V1.0    第 7 页
+}
+
+function applyStoryLife(state, eventId, choiceIndex) {
+  const life = getLifeState(state);
+  if (eventId === "life_move_house" && choiceIndex === 0) life.housing = "near";
+  if (eventId === "life_family_choice") {
+    if (life.relationship === "single") { life.relationship = "dating"; life.relationshipSince = state.careerYear; }
+    if (choiceIndex === 0) life.longDistance = true;
+    if (choiceIndex === 2) life.relocationPending = true;
+  }
+  return life;
+}
+
+function childAge(state) {
+  const child = getLifeState(state).child;
+  return child ? state.careerYear - child.bornYear : null;
+}
+
+function annualChildCost(state) {
+  const age = childAge(state);
+  return age !== null && age < 18 ? 2 : 0;
+}
+
+function annualLifeCost(state) {
+  const life = getLifeState(state);
+  return (life.vehicle ? 2 : 0) - (life.housing === "owned" ? 1 : 0) + annualChildCost(state);
+}
+
+function actionReason(state, id) {
+  const action = ACTIONS.find((item) => item.id === id);
+  if (!action) return "未知安排";
+  const life = getLifeState(state);
+  if (!["event", "planning"].includes(state.phase) || state.appointment || (state.startOfYearResults || []).length) return "请在本年度工作进行期间完成人生安排";
+  if (life.lastActionYear === state.careerYear) return "本年度已安排一次，下一年再来";
+  if (id === "meet" && life.relationship !== "single") return "已经有稳定伴侣";
+  if (id === "marry" && (life.relationship !== "dating" || state.careerYear <= life.relationshipSince)) return "需要稳定交往满一个年度";
+  if (id === "child") {
+    if (life.child) return "本版已有一个孩子，不支持重复安排";
+    const marriage = life.actions.find((item) => item.id === "marry");
+    if (life.relationship !== "married" || (marriage && state.careerYear <= marriage.year)) return "需要先组建家庭，下一年度起再安排";
+  }
+  if (id === "reunite" && !life.longDistance) return "目前没有两地生活安排";
+  if (id === "car" && life.vehicle) return "已经有代步车";
+  if (id === "home" && life.housing === "owned") return "已经有自住住房";
+  const cashCost = id === "home" ? homeFunding(state, action.cost).cashCost : action.cost;
+  if (state.assets < cashCost) return `结余不足，需要 ${cashCost.toFixed(2)} 万可用游戏资金${id === "home" ? "（已计入公积金抵扣）" : ""}`;
+  return null;
+}
+
+function takeLifeAction(inputState, id) {
+
+重生之我是公务员的一生（游戏软件） V1.0    第 8 页
+  const reason = actionReason(inputState, id);
+  if (reason) throw new Error(reason);
+  const state = JSON.parse(JSON.stringify(inputState));
+  const life = getLifeState(state);
+  const action = ACTIONS.find((item) => item.id === id);
+  const funding = id === "home" ? homeFunding(state, action.cost) : { cashCost: action.cost, housingFundUsed: 0 };
+  state.assets = money(state.assets - funding.cashCost);
+  if (funding.housingFundUsed > 0) state.accounts = spendHousingFund(state, funding.housingFundUsed);
+  for (const [key, value] of Object.entries(action.effects)) state.stats[key] = Math.max(0, Math.min(100, state.stats[key] + value));
+  if (id === "meet") { life.relationship = "dating"; life.relationshipSince = state.careerYear; }
+  if (id === "marry") life.relationship = "married";
+  if (id === "child") life.child = { name: "小满", bornYear: state.careerYear };
+  if (id === "car") life.vehicle = true;
+  if (id === "home") life.housing = "owned";
+  life.lastActionYear = state.careerYear;
+  life.actions.push({ id, year: state.careerYear, roleIndex: state.roleIndex, title: action.name, cost: action.cost, ...funding, effects: { ...action.effects }, outcome: action.outcome });
+  state.life = life;
+  return state;
+}
+
+function validLife(life, year) {
+  if (!life || typeof life !== "object" || Array.isArray(life)) return false;
+  if (!Object.prototype.hasOwnProperty.call(HOUSING, life.housing) || !Object.prototype.hasOwnProperty.call(RELATIONSHIPS, life.relationship)) return false;
+  if (!["vehicle", "longDistance", "relocationPending"].every((key) => typeof life[key] === "boolean")) return false;
+  if (!["relationshipSince", "lastActionYear"].every((key) => Number.isInteger(life[key]) && life[key] >= 0 && life[key] <= year)) return false;
+  if (life.relationship === "single" && (life.longDistance || life.relocationPending)) return false;
+  if (!Array.isArray(life.actions) || life.actions.length > MAX_CAREER_YEARS) return false;
+  const births = life.actions.filter((item) => item && item.id === "child");
+  if (life.child !== undefined && life.child !== null) {
+    if (typeof life.child !== "object" || Array.isArray(life.child) || life.child.name !== "小满" ||
+      !Number.isInteger(life.child.bornYear) || life.child.bornYear < 1 || life.child.bornYear > year ||
+      births.length !== 1 || births[0].year !== life.child.bornYear || life.relationship !== "married") return false;
+  } else if (births.length) return false;
+  const years = new Set();
+  return life.actions.every((item) => {
+    if (!item || !ACTIONS.some((action) => action.id === item.id) || !Number.isInteger(item.roleIndex) || !ROLES[item.roleIndex] || !Number.isInteger(item.year) || item.year < 1 || item.year > year || years.has(item.year)) return false;
+    years.add(item.year);
+    const hasFunding = item.cashCost !== undefined || item.housingFundUsed !== undefined;
+    if (hasFunding && (!Number.isFinite(item.cashCost) || item.cashCost < 0 || !Number.isFinite(item.housingFundUsed) || item.housingFundUsed < 0 ||
+      money(item.cashCost + item.housingFundUsed) !== item.cost || (item.id !== "home" && item.housingFundUsed !== 0))) return false;
+    return typeof item.title === "string" && typeof item.outcome === "string" && item.outcome.length <= 2000 && Number.isFinite(item.cost) && item.cost >= 0 && item.year <= life.lastActionYear;
+  });
+}
+
+module.exports = { HOUSING, RELATIONSHIPS, ACTIONS, createLifeState, getLifeState, applyStoryLife, childAge, annualChildCost, annualLifeCost, actionReason, takeLifeAction, validLife };
+
+/* ===== 文件：src/core/accounts.js ===== */
+"use strict";
+
+const { MAX_CAREER_YEARS, ROLES } = require("./constants");
+
+重生之我是公务员的一生（游戏软件） V1.0    第 9 页
+
+// Fictional extra game benefits. No real-world payroll, tax or withdrawal rules.
+const ACCOUNT_RATES = { housingFund: 0.2, annuity: 0.1 };
+const money = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
+const isMoney = (value) => Number.isFinite(value) && value >= 0 && value <= 1000000 && Math.abs(value * 100 - Math.round(value * 100)) < 0.000001;
+const record = (value) => Boolean(value && typeof value === "object" && !Array.isArray(value));
+
+function createAccounts(year = 1) {
+  return { startedYear: year, housingFund: 0, annuity: 0, entries: [] };
+}
+
+function getAccounts(state) {
+  // Old saves start at zero now, with no invented retroactive contributions.
+  return state.accounts ? JSON.parse(JSON.stringify(state.accounts)) : createAccounts(state.careerYear);
+}
+
+function annualAccountCredit(annualIncome) {
+  return { housingFund: money(annualIncome * ACCOUNT_RATES.housingFund), annuity: money(annualIncome * ACCOUNT_RATES.annuity) };
+}
+
+function validCredit(credit) {
+  return record(credit) && isMoney(credit.housingFund) && isMoney(credit.annuity);
+}
+
+function creditAccounts(state, credit) {
+  if (!validCredit(credit)) throw new Error("Invalid account credit");
+  const accounts = getAccounts(state);
+  if (accounts.entries.some((entry) => entry.type === "annual" && entry.year === state.careerYear)) throw new Error("本年度账户已经入账");
+  accounts.housingFund = money(accounts.housingFund + credit.housingFund);
+  accounts.annuity = money(accounts.annuity + credit.annuity);
+  accounts.entries.push({ type: "annual", year: state.careerYear, roleIndex: state.roleIndex, ...credit });
+  return accounts;
+}
+
+function homeFunding(state, price = 50) {
+  const housingFundUsed = money(Math.min(price, getAccounts(state).housingFund));
+  return { housingFundUsed, cashCost: money(price - housingFundUsed) };
+}
+
+function spendHousingFund(state, amount) {
+  const accounts = getAccounts(state);
+  if (!isMoney(amount) || amount > 50 || amount > accounts.housingFund) throw new Error("公积金余额不足或金额无效");
+  if (amount === 0) return accounts;
+  if (accounts.entries.some((entry) => entry.type === "home")) throw new Error("已使用公积金购置住房");
+  accounts.housingFund = money(accounts.housingFund - amount);
+  accounts.entries.push({ type: "home", year: state.careerYear, roleIndex: state.roleIndex, amount });
+  return accounts;
+}
+
+function validAccounts(accounts, year) {
+
+重生之我是公务员的一生（游戏软件） V1.0    第 10 页
+  if (!record(accounts) || !Number.isInteger(accounts.startedYear) || accounts.startedYear < 1 || accounts.startedYear > year ||
+    !isMoney(accounts.housingFund) || !isMoney(accounts.annuity) || !Array.isArray(accounts.entries) || accounts.entries.length > MAX_CAREER_YEARS + 1) return false;
+  let housingFund = 0;
+  let annuity = 0;
+  let lastYear = accounts.startedYear;
+  let usedHome = false;
+  const creditedYears = new Set();
+  for (const entry of accounts.entries) {
+    if (!record(entry) || !Number.isInteger(entry.year) || entry.year < lastYear || entry.year > year ||
+      !Number.isInteger(entry.roleIndex) || !ROLES[entry.roleIndex]) return false;
+    lastYear = entry.year;
+    if (entry.type === "annual") {
+      if (!validCredit(entry) || creditedYears.has(entry.year)) return false;
+      creditedYears.add(entry.year);
+      housingFund = money(housingFund + entry.housingFund);
+      annuity = money(annuity + entry.annuity);
+    } else if (entry.type === "home") {
+      if (usedHome || !isMoney(entry.amount) || entry.amount <= 0 || entry.amount > 50 || entry.amount > housingFund) return false;
+      usedHome = true;
+      housingFund = money(housingFund - entry.amount);
+    } else return false;
+  }
+  return accounts.housingFund === housingFund && accounts.annuity === annuity;
+}
+
+module.exports = { ACCOUNT_RATES, money, createAccounts, getAccounts, annualAccountCredit, validCredit, creditAccounts, homeFunding, spendHousingFund, validAccounts };
+
+/* ===== 文件：src/core/accountability.js ===== */
+"use strict";
+
+const CASE_STATUSES = ["clear", "unreported", "review", "disciplinary", "investigation", "prosecution", "convicted"];
+const NUMBER_FIELDS = ["acceptedValue", "retainedValue", "dutyAbuse", "concealment", "publicHarm", "cooperation"];
+
+function createAccountability() {
+  return {
+    acceptedValue: 0,
+    retainedValue: 0,
+    dutyAbuse: 0,
+    concealment: 0,
+    publicHarm: 0,
+    cooperation: 0,
+    caseStatus: "clear",
+    sentenceExposure: 0,
+    sentenceYears: 0
+  };
+}
+
+function getAccountability(state) {
+  if (state && state.accountability) return { ...createAccountability(), ...state.accountability };
+  const inferred = createAccountability();
+
+重生之我是公务员的一生（游戏软件） V1.0    第 11 页
+  for (const entry of (state && state.history) || []) {
+    if (entry.eventId === "county_friend_project" && entry.choiceIndex === 2) {
+      inferred.acceptedValue += 5;
+      inferred.retainedValue += 5;
+      inferred.dutyAbuse += 1;
+      inferred.caseStatus = "unreported";
+    }
+    if (entry.eventId === "followup_friend_project_taken" && entry.choiceIndex === 0) {
+      inferred.retainedValue = Math.max(0, inferred.retainedValue - 5);
+      inferred.cooperation += 2;
+      inferred.caseStatus = "disciplinary";
+    }
+    if (entry.eventId === "followup_friend_project_taken" && entry.choiceIndex === 1) {
+      inferred.concealment += 1;
+      inferred.caseStatus = "investigation";
+    }
+  }
+  return inferred;
+}
+
+function applyAccountability(state, effects = {}) {
+  const current = getAccountability(state);
+  const next = { ...current };
+  NUMBER_FIELDS.forEach((field) => {
+    if (Number.isFinite(effects[field])) next[field] = Math.max(0, current[field] + effects[field]);
+  });
+  next.retainedValue = Math.min(next.retainedValue, next.acceptedValue);
+  // A later gift scene must never move an existing investigation back to the
+  // softer "unreported" state. Accountability can only advance.
+  if (CASE_STATUSES.includes(effects.caseStatus) &&
+    CASE_STATUSES.indexOf(effects.caseStatus) > CASE_STATUSES.indexOf(next.caseStatus)) {
+    next.caseStatus = effects.caseStatus;
+  }
+  if ([0, 3, 7, 12].includes(effects.sentenceExposure)) next.sentenceExposure = effects.sentenceExposure;
+  if (effects.sentenceExposureFromRecord) {
+    const severity = next.acceptedValue + next.dutyAbuse * 2 + next.concealment * 3 + next.publicHarm * 8;
+    next.sentenceExposure = severity >= 70 ? 12 : severity >= 22 ? 7 : 3;
+  }
+  if (effects.convictFromExposure) {
+    next.caseStatus = "convicted";
+    next.sentenceYears = [3, 7, 12].includes(next.sentenceExposure) ? next.sentenceExposure : 3;
+  }
+  state.accountability = next;
+  return next;
+}
+
+function validAccountability(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  if (!NUMBER_FIELDS.every((field) => Number.isFinite(value[field]) && value[field] >= 0)) return false;
+  if (value.retainedValue > value.acceptedValue) return false;
+
+重生之我是公务员的一生（游戏软件） V1.0    第 12 页
+  if (!CASE_STATUSES.includes(value.caseStatus)) return false;
+  if (![0, 3, 7, 12].includes(value.sentenceExposure) || ![0, 3, 7, 12].includes(value.sentenceYears)) return false;
+  return value.caseStatus === "convicted" ? value.sentenceYears > 0 : value.sentenceYears === 0;
+}
+
+module.exports = { CASE_STATUSES, applyAccountability, createAccountability, getAccountability, validAccountability };
+
+/* ===== 文件：src/core/competition.js ===== */
+"use strict";
+
+const { ROLES } = require("./constants");
+const { nextRandom } = require("./random");
+
+const CANDIDATES = [
+  { name: "顾禾", profile: "群众工作扎实，民望表现突出" },
+  { name: "唐野", profile: "一线经历完整，年度政绩稳定" },
+  { name: "周砚", profile: "材料与协调能力均衡" },
+  { name: "林照", profile: "跨部门项目经历较多" },
+  { name: "许行舟", profile: "长期任务推进表现突出" },
+  { name: "沈知微", profile: "风险判断与原则性较强" },
+  { name: "程望", profile: "统筹经验与执行记录稳定" },
+  { name: "孟川", profile: "跨区域协作履历较完整" }
+];
+
+function validOpportunity(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  if (typeof value.available !== "boolean" || ![0, 1].includes(value.vacancies)) return false;
+  if (value.available !== (value.vacancies === 1)) return false;
+  if (!value.available) return value.candidate === null;
+  const candidate = value.candidate;
+  return Boolean(candidate && typeof candidate === "object" && !Array.isArray(candidate) &&
+    typeof candidate.name === "string" && candidate.name.length >= 2 && candidate.name.length <= 12 &&
+    typeof candidate.profile === "string" && candidate.profile.length >= 4 && candidate.profile.length <= 80 &&
+    Number.isInteger(candidate.score) && candidate.score >= 0 && candidate.score <= 110);
+}
+
+// A deterministic annual snapshot: opening the panel never consumes game RNG.
+// Vacancy rate and competitor score are fictional game parameters.
+function getPromotionOpportunity(state) {
+  if (!state || state.roleIndex >= ROLES.length - 1) return null;
+  const mixedSeed = (state.seed ^ Math.imul(state.careerYear, 0x9e3779b1) ^ Math.imul(state.roleIndex + 1, 0x85ebca6b)) >>> 0;
+  const vacancyRoll = nextRandom(mixedSeed);
+  if (vacancyRoll.value < 0.15) return { available: false, vacancies: 0, candidate: null };
+  const scoreRoll = nextRandom(vacancyRoll.seed);
+  const candidateRoll = nextRandom(scoreRoll.seed);
+  const currentRole = ROLES[state.roleIndex];
+  const candidate = CANDIDATES[Math.floor(candidateRoll.value * CANDIDATES.length)];
+  return {
+    available: true,
+    vacancies: 1,
+
+重生之我是公务员的一生（游戏软件） V1.0    第 13 页
+    candidate: {
+      name: candidate.name,
+      profile: candidate.profile,
+      score: Math.max(0, Math.min(110, currentRole.threshold - 2 + Math.floor(scoreRoll.value * 7)))
+    }
+  };
+}
+
+module.exports = { CANDIDATES, getPromotionOpportunity, validOpportunity };
+
+/* ===== 文件：src/core/engine.js ===== */
+"use strict";
+
+const {
+  ATTRIBUTES,
+  BACKGROUNDS,
+  MAX_CAREER_YEARS,
+  ROLES,
+  SAVE_VERSION,
+  CIVIL_RANKS, LEADERSHIP_MIN_RANK
+} = require("./constants");
+const { nextRandom, normalizeSeed, pick } = require("./random");
+const { ENDINGS } = require("../data/endings");
+const { createLifeState, getLifeState, applyStoryLife, childAge, annualChildCost, annualLifeCost, validLife } = require("./life");
+const { createAccounts, annualAccountCredit, creditAccounts, validAccounts, validCredit, money } = require("./accounts");
+const { getPromotionOpportunity, validOpportunity } = require("./competition");
+const { applyAccountability, createAccountability, getAccountability, validAccountability } = require("./accountability");
+
+const INTEGRITY_CHECK_INTERVAL = 4;
+// Once a sufficiently serious evidence chain exists, the career receives one
+// deterministic screening roll. At 60%, the fixed uniform-random audit settles
+// near the product target: roughly half of all careers reach a conviction.
+const INTEGRITY_CASE_DETECTION_RATE = 0.755;
+const CRITICAL_HEALTH = 10;
+
+const PROMOTION_MOVES = {
+  report: {
+    id: "report",
+    name: "拿成绩说话，正常汇报",
+    short: "正常汇报",
+    cost: 0,
+    bonus: 1,
+    risk: 0,
+    effects: { ability: 1, integrity: 1 },
+    outcome: "你把成绩、短板和下一步都摆在桌面上。没有暗示，也没有礼盒。上级只说了一句：‘年底看结果。’不刺激，但晚上睡得踏实。"
+  },
+  dinner: {
+    id: "dinner",
+    name: "赴饭局，混个脸熟",
+    short: "人情饭局",
+
+重生之我是公务员的一生（游戏软件） V1.0    第 14 页
+    cost: 0.3,
+    bonus: 4,
+    risk: 0.2,
+    effects: { performance: 2, integrity: -5, health: -2 },
+    outcome: "酒过三巡，对方笑着说‘以后多走动’。你似乎被记住了，也说不清被记住的是成绩，还是这顿不该由你张罗的饭。"
+  },
+  gift: {
+    id: "gift",
+    name: "拎礼盒带红包，去敲门",
+    short: "送礼请托",
+    cost: 0.8,
+    bonus: 8,
+    risk: 0.48,
+    effects: { performance: 4, integrity: -12, family: -2 },
+    outcome: "门开了一条缝，礼盒进去了，你的名字也进了另一份记忆。它可能让你靠近位置，也可能让你离调查谈话更近。"
+  }
+};
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function clamp(value, min = 0, max = 100) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function applyEffects(stats, effects = {}) {
+  const next = { ...stats };
+  const changes = {};
+  ATTRIBUTES.forEach((key) => {
+    if (typeof effects[key] !== "number") return;
+    const previous = next[key];
+    next[key] = clamp(previous + effects[key]);
+    changes[key] = next[key] - previous;
+  });
+  return { stats: next, changes };
+}
+
+function createNewGame(backgroundId, seed = Date.now()) {
+  const background = BACKGROUNDS.find((item) => item.id === backgroundId);
+  if (!background) throw new Error(`Unknown background: ${backgroundId}`);
+
+  const baseStats = {
+    ability: 48,
+    performance: 45,
+    trust: 48,
+    integrity: 58,
+    family: 55,
+    health: 60
+  };
+
+重生之我是公务员的一生（游戏软件） V1.0    第 15 页
+  const adjusted = applyEffects(baseStats, background.effects).stats;
+
+  return {
+    version: SAVE_VERSION,
+    seed: normalizeSeed(seed),
+    backgroundId,
+    careerYear: 1,
+    yearsInRole: 0,
+    roleIndex: 0,
+    rankIndex: 1,
+    yearsInRank: 0,
+    appointment: null,
+    stats: adjusted,
+    assets: 2,
+    life: createLifeState(),
+    accounts: createAccounts(),
+    accountability: createAccountability(),
+    flags: {},
+    seen: {},
+    delayed: [],
+    history: [],
+    annualReports: [],
+    queue: [],
+    currentEventId: null,
+    phase: "idle",
+    lastResult: null,
+    review: null,
+    endingId: null,
+    longTermWins: 0
+  };
+}
+
+// Province, governor and national posts must not replay grass-roots execution
+// scenes. The authored rule is expressed as an explicit id-prefix whitelist so
+// it stays reviewable in one place; scripts/validate-content.js reuses this
+// predicate to flag any event whose declared roleLevels reach 7+ while the
+// whitelist would never let it be drawn (authored content silently wasted).
+const HIGH_POST_EVENT_PREFIXES = ["province_", "national_", "duty_", "dept_"];
+
+function outOfPostScope(event, roleIndex) {
+  if (roleIndex < 7) return false;
+  if (!["work", "city"].includes(event.category)) return false;
+  if (event.requiresFlags) return false;
+  return !HIGH_POST_EVENT_PREFIXES.some((prefix) => event.id.startsWith(prefix));
+}
+
+function eligibleEvents(state, events, category) {
+  // `seen` is a fast lookup cache, but old saves and tabs can contain a
+  // complete history with a missing/stale cache entry.  For one-off stories,
+  // the persisted history is the source of truth so they cannot be drawn
+
+重生之我是公务员的一生（游戏软件） V1.0    第 16 页
+  // again merely because that cache drifted.
+  const historicalEventIds = new Set((state.history || []).map((entry) => entry.eventId));
+  return events.filter((event) => {
+    if (event.category !== category) return false;
+    if (event.requiresChild) {
+      const age = childAge(state);
+      if (age === null || age < event.minChildAge || age > event.maxChildAge) return false;
+    }
+    if (event.requiresPartner) {
+      const life = getLifeState(state);
+      if (life.relationship === "single" || state.careerYear - life.relationshipSince < (event.minRelationshipYears || 0)) return false;
+    }
+    if (event.id === "life_move_house" && getLifeState(state).housing !== "rental") return false;
+    if (!event.roleLevels.includes(state.roleIndex)) return false;
+    if (outOfPostScope(event, state.roleIndex)) return false;
+    if (event.minYear && state.careerYear < event.minYear) return false;
+    if (event.maxYear && state.careerYear > event.maxYear) return false;
+    if (event.once && (state.seen[event.id] !== undefined || historicalEventIds.has(event.id))) return false;
+    if (event.afterEvent) {
+      const sourceYear = state.seen[event.afterEvent.id];
+      if (sourceYear === undefined || state.careerYear - sourceYear < event.afterEvent.years) return false;
+    }
+    if (event.requiresFlags) {
+      return event.requiresFlags.every((flag) => Boolean(state.flags[flag]));
+    }
+    return true;
+  });
+}
+
+const STORY_THEME_RULES = [  ["case-boundary", /案情|案件|办案|笔录|侦查|审判|法院|检察|报警/],
+  ["gift-benefit", /礼盒|礼品|红包|购物卡|转账|现金|酒|宴请|饭局|请吃|土特产/],
+  ["project-procurement", /招标|投标|评审|供应方|分包|承包|验收|工程|项目/],
+  ["records-data", /档案|材料|报表|报告|清单|台账|数字|名单|签字|纪要/],
+  ["emergency-safety", /暴雨|台风|险情|应急|救援|安置|消防|事故|桥|河堤/],
+  ["welfare-care", /民政|低保|救助|养老|儿童|老人|殡葬|慈善/],
+  ["family-relationship", /家人|父亲|母亲|伴侣|孩子|生日|同学|朋友|亲戚|表弟/],
+  ["health-rest", /健康|体检|复查|医院|医生|病|休息|睡/],
+  ["public-opinion", /直播|记者|热搜|舆情|评论区|媒体|视频/],
+  ["budget-resource", /预算|资金|财政|资源|成本|工资|补贴/],
+  ["team-management", /下属|同事|队伍|干部|值班|加班|会议/]
+];
+
+function eventTheme(event) {
+  if (!event) return "unknown";
+  if (event.storyTheme) return event.storyTheme;
+  const text = `${event.title || ""} ${event.body || ""}`;
+  const matched = STORY_THEME_RULES.find(([, pattern]) => pattern.test(text));
+  return matched ? matched[0] : `scene:${event.id}`;
+}
+
+
+重生之我是公务员的一生（游戏软件） V1.0    第 17 页
+function drawEvent(state, events, category) {
+  const eligible = eligibleEvents(state, events, category);
+  if (!eligible.length) throw new Error(`No eligible ${category} events for role ${state.roleIndex}`);
+
+  const followups = eligible.filter((event) => event.requiresFlags && event.requiresFlags.length && state.seen[event.id] == null);
+  const milestones = eligible.filter((event) => event.requiresChild && state.seen[event.id] == null);
+  const unseen = eligible.filter((event) => state.seen[event.id] == null);
+  const cooled = eligible.filter((event) => {
+    const lastSeen = state.seen[event.id];
+    const cooldown = event.cooldownYears || 3;
+    return lastSeen == null || state.careerYear - lastSeen >= cooldown;
+  });
+  const basePool = milestones.length ? milestones : followups.length ? followups : unseen.length ? unseen : cooled.length ? cooled : eligible;
+  // Exact IDs are already single-use. This second guard prevents consecutive
+  // years from feeling repetitive when two different scenes share the same
+  // dramatic subject (for example two archive errors or two gift attempts).
+  // A causal follow-up keeps priority because it advances an earlier choice;
+  // standalone scenes rotate away from themes used in the last three years.
+  // Exact event IDs remain single-use for the entire career; a causal sequel
+  // may revisit a subject because it advances the player's earlier choice.
+  const recentThemes = new Set((state.history || [])
+    .filter((entry) => entry.year >= state.careerYear - 3)
+    .map((entry) => events.find((event) => event.id === entry.eventId))
+    .filter(Boolean)
+    .map(eventTheme));
+  const varied = basePool.filter((event) => event.afterEvent || !recentThemes.has(eventTheme(event)));
+  const pool = varied.length ? varied : basePool;
+  const selection = pick(state.seed, pool);
+  state.seed = selection.seed;
+  state.currentEventId = selection.item.id;
+  state.seen[selection.item.id] = state.careerYear;
+  state.phase = "event";
+  return state;
+}
+
+function applyDueEffects(state) {
+  const due = state.delayed.filter((item) => item.dueYear <= state.careerYear);
+  state.delayed = state.delayed.filter((item) => item.dueYear > state.careerYear);
+  const messages = [];
+  due.forEach((item) => {
+    const result = applyEffects(state.stats, item.effects);
+    state.stats = result.stats;
+    if ((item.effects.performance || 0) >= 6) state.longTermWins += 1;
+    messages.push({ message: item.message, changes: result.changes });
+  });
+  return messages;
+}
+
+function beginYear(inputState, events) {
+  const state = clone(inputState);
+
+重生之我是公务员的一生（游戏软件） V1.0    第 18 页
+  state.lastResult = null;
+  state.review = null;
+  state.currentEventId = null;
+  const delayedResults = applyDueEffects(state);
+  state.queue = [];
+  const availableWork = eligibleEvents(state, events, "work");
+  const availableLife = eligibleEvents(state, events, "life");
+  const hasPriorityWork = availableWork.some((event) =>
+    state.seen[event.id] === undefined && event.requiresFlags && event.requiresFlags.length);
+  const hasPriorityLife = availableLife.some((event) =>
+    state.seen[event.id] === undefined && (event.requiresFlags || event.requiresChild));
+  const availableCity = eligibleEvents(state, events, "city");
+  const availableIntegrity = eligibleEvents(state, events, "integrity");
+  // Fast narrative mode: one main story per service year. Consequences and
+  // child milestones take priority; otherwise city and life chapters rotate
+  // into the work stream instead of being stacked behind it in the same year.
+  let category = "work";
+  if (hasPriorityLife) category = "life";
+  else if (hasPriorityWork) category = "work";
+  else if (availableIntegrity.length && state.careerYear % INTEGRITY_CHECK_INTERVAL === 0) category = "integrity";
+  else if (availableCity.length && state.careerYear % 5 === 0) category = "city";
+  else if (availableLife.length && state.careerYear % 3 === 0) category = "life";
+  state.startOfYearResults = delayedResults;
+  if (getAccountability(state).caseStatus === "convicted" || state.stats.health <= CRITICAL_HEALTH || state.stats.integrity < 15) {
+    state.phase = "ending";
+    state.endingId = resolveEndingId(state);
+    state.queue = [];
+    return state;
+  }
+  if (!eligibleEvents(state, events, category).length) {
+    category = ["work", "integrity", "life", "city"].find((candidate) => eligibleEvents(state, events, candidate).length);
+  }
+  // A deliberately non-promoting career can outlive every authored scene for
+  // its current post. Never resurrect a read story merely to fill the year.
+  // Such rare years settle normally and disclose why no choice was shown.
+  if (!category) {
+    state.review = null;
+    state.phase = "planning";
+    state.currentEventId = null;
+    state.noNewStory = true;
+    return state;
+  }
+  // Fast mode is intentionally one decision per year. Life, city, integrity
+  // and consequence chapters rotate into this single slot instead of being
+  // stacked behind a compulsory second work card.
+  return drawEvent(state, events, category);
+}
+
+function selectChoice(inputState, events, choiceIndex) {
+  const state = clone(inputState);
+
+重生之我是公务员的一生（游戏软件） V1.0    第 19 页
+  if (state.phase !== "event") throw new Error("A choice can only be made during an event");
+  const event = events.find((item) => item.id === state.currentEventId);
+  if (!event) throw new Error(`Missing event: ${state.currentEventId}`);
+  if (!Number.isInteger(choiceIndex)) throw new Error("Choice index must be an integer");
+  const choice = event.choices[choiceIndex];
+  if (!choice) throw new Error(`Invalid choice index ${choiceIndex}`);
+
+  const effectResult = applyEffects(state.stats, choice.effects);
+  state.stats = effectResult.stats;
+  state.assets += choice.assetChange || 0;
+  state.flags = { ...state.flags, ...(choice.flags || {}) };
+  if (choice.accountability) applyAccountability(state, choice.accountability);
+  const accountability = getAccountability(state);
+  const evidenceThresholdReached = accountability.retainedValue > 0 &&
+    accountability.dutyAbuse >= 3 && accountability.concealment >= 1;
+  if (evidenceThresholdReached && !state.flags.integrityCaseScreened &&
+    !["prosecution", "convicted"].includes(accountability.caseStatus)) {
+    const detection = nextRandom(state.seed);
+    state.seed = detection.seed;
+    state.flags.integrityCaseScreened = true;
+    if (detection.value < INTEGRITY_CASE_DETECTION_RATE) {
+      state.flags.integrityCaseOpened = true;
+      applyAccountability(state, { caseStatus: "investigation" });
+    } else {
+      state.flags.integrityEvidenceMissed = true;
+    }
+  }
+  state.life = applyStoryLife(state, event.id, choiceIndex);
+  (choice.delayed || []).forEach((delayed) => {
+    state.delayed.push({
+      dueYear: state.careerYear + delayed.afterYears,
+      effects: delayed.effects,
+      message: delayed.message
+    });
+  });
+
+  const sentenceYears = getAccountability(state).sentenceYears;
+  const fillStoryValues = (text) => typeof text === "string"
+    ? text.replace(/\{\{sentenceYears\}\}/g, String(sentenceYears || "待依法判定"))
+    : text;
+  const historyEntry = {
+    year: state.careerYear,
+    roleIndex: state.roleIndex,
+    eventId: event.id,
+    eventTitle: event.title,
+    storyTheme: eventTheme(event),
+    choiceIndex,
+    choiceText: choice.text,
+    ...(choice.outcome ? { outcome: fillStoryValues(choice.outcome) } : {}),
+    ...(choice.accountability && choice.accountability.note
+
+重生之我是公务员的一生（游戏软件） V1.0    第 20 页
+      ? { accountabilityNote: fillStoryValues(choice.accountability.note) }
+      : {}),
+    changes: effectResult.changes,
+    assetChange: choice.assetChange || 0,
+    delayedMessages: (choice.delayed || []).map((item) => `约 ${item.afterYears} 年后回看此事`)
+  };
+  state.history.push(historyEntry);
+  state.lastResult = historyEntry;
+  state.phase = "result";
+  return state;
+}
+
+function currentPromotionPlan(state) {
+  return state && state.promotionPlan && state.promotionPlan.year === state.careerYear ? state.promotionPlan : null;
+}
+
+function promotionChoice(state) {
+  const plan = currentPromotionPlan(state);
+  return plan ? plan.choice : "automatic";
+}
+
+function promotionActionReason(state, choiceId) {
+  if (!state || state.phase !== "event" || state.appointment || (state.startOfYearResults || []).length) return "只能在本年度故事处理前选择";
+  if (state.roleIndex >= ROLES.length - 1) return "已经到达本局最高岗位";
+  if (currentPromotionPlan(state)) return "本年度已经作出选择";
+  const move = PROMOTION_MOVES[choiceId];
+  if (!move) return "这个选择不存在";
+  if (state.assets < move.cost) return `可支配现金不足 ${move.cost.toFixed(1)} 万`;
+  return null;
+}
+
+function setPromotionChoice(inputState, choiceId) {
+  const state = clone(inputState);
+  const move = PROMOTION_MOVES[choiceId];
+  const reason = promotionActionReason(state, choiceId);
+  if (reason) throw new Error(reason);
+  const applied = applyEffects(state.stats, move.effects);
+  state.stats = applied.stats;
+  state.assets = money(state.assets - move.cost);
+  const priorRiskMoves = (state.annualReports || []).filter((report) => ["dinner", "gift"].includes(report.promotionChoice)).length;
+  const detectionRate = Math.min(0.9, move.risk + priorRiskMoves * (choiceId === "gift" ? 0.1 : 0.06));
+  const mixedSeed = (state.seed ^ Math.imul(state.careerYear, 0x9e3779b1) ^ (choiceId === "gift" ? 0x85ebca6b : 0xc2b2ae35)) >>> 0;
+  const detected = detectionRate > 0 && nextRandom(mixedSeed).value < detectionRate;
+  if (detected) {
+    const fallout = applyEffects(state.stats, { trust: -5, integrity: -3, health: -3 });
+    state.stats = fallout.stats;
+    Object.entries(fallout.changes).forEach(([key, value]) => { applied.changes[key] = (applied.changes[key] || 0) + value; });
+  }
+  state.promotionPlan = {
+    year: state.careerYear,
+
+重生之我是公务员的一生（游戏软件） V1.0    第 21 页
+    choice: choiceId,
+    bonus: move.bonus,
+    cost: move.cost,
+    detected,
+    changes: applied.changes,
+    outcome: move.outcome
+  };
+  return state;
+}
+
+function calculateReview(state) {
+  const role = ROLES[state.roleIndex];
+  const roleFit = (state.stats.ability + state.stats.trust) / 2;
+  const contributions = [
+    { label: "政绩", value: state.stats.performance, weight: 35 },
+    { label: "能力", value: state.stats.ability, weight: 20 },
+    { label: "民望", value: state.stats.trust, weight: 15 },
+    { label: "廉洁", value: state.stats.integrity, weight: 20 },
+    { label: "岗位匹配", value: roleFit, weight: 10 }
+  ].map((item) => ({ ...item, score: item.value * item.weight / 100 }));
+  const baseScore = contributions.reduce((total, item) => total + item.score, 0);
+  const randomResult = nextRandom(state.seed);
+  const randomShift = Math.round(randomResult.value * 12 - 6);
+  const plan = currentPromotionPlan(state);
+  const relationshipBonus = plan && PROMOTION_MOVES[plan.choice] && !plan.detected ? plan.bonus : 0;
+  const finalScore = Math.round(baseScore + randomShift + relationshipBonus);
+  const nextRoleExists = state.roleIndex < ROLES.length - 1;
+  const competition = nextRoleExists ? getPromotionOpportunity(state) : null;
+  const reasons = [];
+
+  if (state.yearsInRole + 1 < role.minYears) {
+    reasons.push(`当前岗位需至少 ${role.minYears} 年经历`);
+  }
+  if (nextRoleExists && state.stats.performance < role.minPerformance) reasons.push(`政绩需至少 ${role.minPerformance}`);
+  if (nextRoleExists && state.stats.integrity < role.minIntegrity) reasons.push(`廉洁需至少 ${role.minIntegrity}`);
+  if (state.stats.health <= CRITICAL_HEALTH) reasons.push("健康状态无法继续履职");
+  if (finalScore < role.threshold) reasons.push(`总分未达到 ${role.threshold}`);
+  if (nextRoleExists && competition && !competition.available) reasons.push("目标岗位本年度没有空缺");
+  if (nextRoleExists && competition && competition.available && finalScore <= competition.candidate.score) {
+    reasons.push(`同场人选组织评价 ${competition.candidate.score} 分，本次未形成优势`);
+  }
+  if (plan && plan.detected) reasons.push("请客送礼引发核查，本年不予提拔");
+  if (!nextRoleExists) reasons.push("已处于最高岗位");
+  const demoted = state.roleIndex > 0 && (finalScore < 42 || state.stats.integrity < 25);
+  if (demoted) reasons.push(state.stats.integrity < 25 ? "廉洁评价过低，触发降任" : "综合评价过低，触发降任");
+  return {
+    contributions,
+    seed: randomResult.seed,
+    baseScore: Math.round(baseScore),
+    randomShift,
+
+重生之我是公务员的一生（游戏软件） V1.0    第 22 页
+    relationshipBonus,
+    finalScore,
+    threshold: role.threshold,
+    promotionMode: "automatic",
+    promotionChoice: plan ? plan.choice : "automatic",
+    promoted: nextRoleExists && reasons.length === 0 && !demoted,
+    demoted,
+    rankPromoted: state.roleIndex < 7 && state.rankIndex < CIVIL_RANKS.length - 1 &&
+      state.yearsInRank + 1 >= 2 && state.stats.integrity >= 60 && finalScore >= 60 &&
+      !(plan && plan.detected) && !(nextRoleExists && reasons.length === 0) && !demoted,
+    competition,
+    reasons,
+    rankAllowance: state.roleIndex < 7 ? Math.floor(state.rankIndex / 2) : 0,
+    annualIncome: role.annualIncome + (state.roleIndex < 7 ? Math.floor(state.rankIndex / 2) : 0),
+    accountCredit: annualAccountCredit(role.annualIncome + (state.roleIndex < 7 ? Math.floor(state.rankIndex / 2) : 0)),
+    lifeCost: annualLifeCost(state),
+    childCost: annualChildCost(state),
+    livingCost: 5 + Math.min(4, Math.floor(state.careerYear / 6)) + annualLifeCost(state)
+  };
+}
+
+function needsAssessment(state) {
+  return false;
+}
+
+function proceedAfterRegularEvents(state, events) {
+  while (state.queue.length) {
+    const nextCategory = state.queue.shift();
+    // A save created by an earlier version may still contain a queued category
+    // whose one-off stories have since all been read. Skip it instead of
+    // replaying an authored scene or failing the year transition.
+    if (eligibleEvents(state, events, nextCategory).length) return drawEvent(state, events, nextCategory);
+  }
+  state.review = null;
+  state.phase = "planning";
+  state.currentEventId = null;
+  return state;
+}
+
+function finalizeAnnualPlanning(inputState) {
+  const state = clone(inputState);
+  if (state.phase !== "planning") throw new Error("Finish annual work before year-end planning");
+  const review = calculateReview(state);
+  state.seed = review.seed;
+  state.review = { ...review, ...(state.noNewStory ? { noNewStory: true } : {}) };
+  delete state.noNewStory;
+  state.phase = "review";
+  return state;
+}
+
+
+重生之我是公务员的一生（游戏软件） V1.0    第 23 页
+function repairRepeatedCurrentEvent(inputState, events) {
+  if (!inputState || inputState.phase !== "event" || !inputState.currentEventId) return inputState;
+  const event = events.find((item) => item.id === inputState.currentEventId);
+  const previous = (inputState.history || []).filter((item) => item.eventId === inputState.currentEventId);
+  if (!event || !event.once || !previous.length) return inputState;
+
+  const state = clone(inputState);
+  state.seen[event.id] = Math.max(...previous.map((item) => item.year));
+  state.currentEventId = null;
+  state.lastResult = null;
+  if (eligibleEvents(state, events, event.category).length) return drawEvent(state, events, event.category);
+  return proceedAfterRegularEvents(state, events);
+}
+
+function repairRepetitiveCurrentTheme(inputState, events) {
+  if (!inputState || inputState.phase !== "event" || !inputState.currentEventId) return inputState;
+  const current = events.find((item) => item.id === inputState.currentEventId);
+  if (!current || current.afterEvent) return inputState;
+  const recentThemes = new Set((inputState.history || [])
+    .filter((entry) => entry.year >= inputState.careerYear - 3)
+    .map((entry) => entry.storyTheme || eventTheme(events.find((event) => event.id === entry.eventId)))
+    .filter(Boolean));
+  if (!recentThemes.has(eventTheme(current))) return inputState;
+
+  const state = clone(inputState);
+  const alreadyCompleted = (state.history || []).some((entry) => entry.eventId === current.id);
+  if (!alreadyCompleted && state.seen[current.id] === state.careerYear) delete state.seen[current.id];
+  const alternatives = eligibleEvents(state, events, current.category)
+    .filter((event) => event.afterEvent || !recentThemes.has(eventTheme(event)));
+  if (!alternatives.length) return inputState;
+  state.currentEventId = null;
+  state.lastResult = null;
+  return drawEvent(state, events, current.category);
+}
+
+function repairLegacyPacing(inputState) {
+  if (!inputState || !["event", "result"].includes(inputState.phase) || !inputState.queue || !inputState.queue.length) return inputState;
+  const state = clone(inputState);
+  state.queue = [];
+  return state;
+}
+
+function advanceAfterResult(inputState, events) {
+  const state = clone(inputState);
+  if (state.phase !== "result") throw new Error("Can only advance from a result");
+  state.lastResult = null;
+  if (getAccountability(state).caseStatus === "convicted" || state.stats.health <= CRITICAL_HEALTH || state.stats.integrity < 15) {
+    state.phase = "ending";
+    state.endingId = resolveEndingId(state);
+    state.currentEventId = null;
+
+重生之我是公务员的一生（游戏软件） V1.0    第 24 页
+    state.queue = [];
+    return state;
+  }
+  return proceedAfterRegularEvents(state, events);
+}
+
+function resolveEndingId(state) {
+  const accountability = getAccountability(state);
+  if (accountability.caseStatus === "convicted") return "criminal_conviction";
+  if (state.stats.health <= CRITICAL_HEALTH) return "health_exit";
+  if (state.stats.integrity < 15) return "disciplinary_exit";
+  // A high title or skill score must not hide the cost of neglecting life.
+  if (state.stats.performance >= 82 && (state.stats.family < 35 || state.stats.health < 35)) {
+    return "results_only";
+  }
+  const values = ATTRIBUTES.map((key) => state.stats[key]);
+  if ((state.stats.family >= 78 && state.roleIndex <= 3) ||
+    (Math.min(...values) >= 60 && Math.max(...values) - Math.min(...values) <= 25)) return "family_first";
+  // 市级部门正职及以上属于本作定义的“较高领导岗位”。最后一档是
+  // 世界观边界位，不能再作为唯一可达条件。
+  if (state.roleIndex >= 6) return "high_office";
+  if ((state.longTermWins >= 2 && state.stats.performance >= 70) || state.stats.trust >= 82) return "public_legacy";
+  if (accountability.caseStatus === "disciplinary" || state.stats.integrity < 45) return "disciplinary_exit";
+  return "clean_retirement";
+}
+
+function completeReview(inputState, events) {
+  const state = clone(inputState);
+  if (state.phase !== "review" || !state.review) {
+    throw new Error("Can only complete an active review");
+  }
+
+  if (state.review.accountCredit) state.accounts = creditAccounts(state, state.review.accountCredit);
+  state.assets = money(state.assets + state.review.annualIncome - state.review.livingCost);
+  state.appointment = null;
+  state.annualReports = [...(state.annualReports || []), {
+    year: state.careerYear,
+    roleIndex: state.roleIndex,
+    promoted: state.review.promoted,
+    demoted: Boolean(state.review.demoted),
+    rankPromoted: Boolean(state.review.rankPromoted),
+    rankIndex: state.rankIndex,
+    score: state.review.finalScore,
+    netIncome: state.review.annualIncome - state.review.livingCost,
+    ...(state.review.childCost !== undefined ? { childCost: state.review.childCost } : {}),
+    ...(state.review.accountCredit ? { accountCredit: { ...state.review.accountCredit } } : {}),
+    promotionMode: state.review.promotionMode || "legacy",
+    ...(state.review.promotionChoice && state.review.promotionChoice !== "automatic" ? { promotionChoice: state.review.promotionChoice } : {}),
+    ...(currentPromotionPlan(state) ? { promotionDetected: Boolean(currentPromotionPlan(state).detected) } : {}),
+    ...(state.review.competition ? { competition: clone(state.review.competition) } : {}),
+
+重生之我是公务员的一生（游戏软件） V1.0    第 25 页
+    reasons: [...state.review.reasons]
+  }];
+  if (state.review.demoted) {
+    state.roleIndex -= 1;
+    state.yearsInRole = 0;
+    state.yearsInRank += 1;
+    state.appointment = { type: "demotion", roleIndex: state.roleIndex, rankIndex: state.rankIndex };
+  } else if (state.review.promoted) {
+    state.roleIndex += 1;
+    state.yearsInRole = 0;
+    state.rankIndex = Math.max(state.rankIndex, LEADERSHIP_MIN_RANK[state.roleIndex] || state.rankIndex);
+    state.yearsInRank = 0;
+    state.appointment = { type: "leadership", roleIndex: state.roleIndex, rankIndex: state.rankIndex };
+  } else {
+    state.yearsInRole += 1;
+    state.yearsInRank += 1;
+    if (state.review.rankPromoted) {
+      state.rankIndex += 1;
+      state.yearsInRank = 0;
+      state.appointment = { type: "rank", roleIndex: state.roleIndex, rankIndex: state.rankIndex };
+    }
+  }
+
+  const mustEnd =
+    getAccountability(state).caseStatus === "convicted" ||
+    state.stats.health <= CRITICAL_HEALTH ||
+    state.stats.integrity < 15 ||
+    state.careerYear >= MAX_CAREER_YEARS;
+  if (mustEnd) {
+    state.endingId = resolveEndingId(state);
+    state.phase = "ending";
+    state.review = null;
+    return state;
+  }
+
+  state.careerYear += 1;
+  // Discard obsolete application data when an older save advances a year.
+  state.promotionPlan = null;
+  return beginYear(state, events);
+}
+
+function findCurrentEvent(state, events) {
+  return events.find((event) => event.id === state.currentEventId) || null;
+}
+
+function leaveCareer(inputState) {
+  const state = clone(inputState);
+  if (state.phase !== "event") throw new Error("Leave before choosing an event");
+  state.phase = "ending";
+  state.endingId = "new_beginning";
+
+重生之我是公务员的一生（游戏软件） V1.0    第 26 页
+  state.currentEventId = null;
+  state.queue = [];
+  return state;
+}
+
+function validateSavedGame(state, events = require("../data/events").EVENTS) {
+  const record = (value) => Boolean(value && typeof value === "object" && !Array.isArray(value));
+  const effects = (value) => record(value) && Object.entries(value).every(([key, amount]) =>
+    ATTRIBUTES.includes(key) && Number.isFinite(amount));
+  const historyEntry = (item) => record(item) && Number.isInteger(item.year) &&
+    item.year >= 1 && item.year <= MAX_CAREER_YEARS && Number.isInteger(item.roleIndex) &&
+    Boolean(ROLES[item.roleIndex]) && typeof item.eventId === "string" &&
+    typeof item.eventTitle === "string" && typeof item.choiceText === "string" &&
+    Number.isInteger(item.choiceIndex) && effects(item.changes) &&
+    (item.storyTheme === undefined || typeof item.storyTheme === "string") &&
+    (item.outcome === undefined || (typeof item.outcome === "string" && item.outcome.length <= 2000)) &&
+    (item.accountabilityNote === undefined || (typeof item.accountabilityNote === "string" && item.accountabilityNote.length <= 1000));
+  if (!state || state.version !== SAVE_VERSION) return false;
+  if (!Number.isInteger(state.careerYear) || state.careerYear < 1 || state.careerYear > MAX_CAREER_YEARS) return false;
+  if (!Number.isInteger(state.roleIndex) || !ROLES[state.roleIndex]) return false;
+  if (!Number.isInteger(state.rankIndex) || !CIVIL_RANKS[state.rankIndex] || !Number.isInteger(state.yearsInRank) || state.yearsInRank < 0) return false;
+  if (state.appointment && (!["leadership", "rank", "demotion"].includes(state.appointment.type) || !ROLES[state.appointment.roleIndex] || !CIVIL_RANKS[state.appointment.rankIndex])) return false;
+  if (!Number.isInteger(state.seed) || state.seed < 0 || state.seed > 0xffffffff) return false;
+  if (!BACKGROUNDS.some((item) => item.id === state.backgroundId)) return false;
+  if (!Number.isInteger(state.yearsInRole) || state.yearsInRole < 0 || state.yearsInRole > MAX_CAREER_YEARS) return false;
+  if (state.assessmentYear !== undefined && (!Number.isInteger(state.assessmentYear) || state.assessmentYear < 0 || state.assessmentYear > state.careerYear)) return false;
+  if (!Number.isFinite(state.assets) || !Number.isInteger(state.longTermWins) || state.longTermWins < 0) return false;
+  if (state.life !== undefined && !validLife(state.life, state.careerYear)) return false;
+  if (state.accounts !== undefined && !validAccounts(state.accounts, state.careerYear)) return false;
+  if (state.accountability !== undefined && !validAccountability(state.accountability)) return false;
+  if (state.promotionPlan !== undefined && state.promotionPlan !== null) {
+    const plan = state.promotionPlan;
+    const legacyPlan = record(plan) && plan.year === state.careerYear && ["apply", "defer"].includes(plan.choice) &&
+      (plan.opportunity === undefined || (plan.choice === "apply" && validOpportunity(plan.opportunity)));
+    const currentPlan = record(plan) && plan.year === state.careerYear && Boolean(PROMOTION_MOVES[plan.choice]) &&
+      Number.isFinite(plan.bonus) && plan.bonus === PROMOTION_MOVES[plan.choice].bonus &&
+      Number.isFinite(plan.cost) && plan.cost === PROMOTION_MOVES[plan.choice].cost &&
+      typeof plan.detected === "boolean" && effects(plan.changes) && typeof plan.outcome === "string";
+    if (!legacyPlan && !currentPlan) return false;
+  }
+  if (!record(state.flags) || !record(state.seen) || !record(state.stats)) return false;
+  if (!ATTRIBUTES.every((key) => Number.isFinite(state.stats[key]) && state.stats[key] >= 0 && state.stats[key] <= 100)) return false;
+  if (!Array.isArray(state.history) || state.history.length > MAX_CAREER_YEARS * 4 || !state.history.every(historyEntry)) return false;
+  if (state.annualReports !== undefined && (!Array.isArray(state.annualReports) || state.annualReports.length > MAX_CAREER_YEARS || !state.annualReports.every((item) =>
+    record(item) && Number.isInteger(item.year) && item.year >= 1 && item.year <= MAX_CAREER_YEARS &&
+    Number.isInteger(item.roleIndex) && Boolean(ROLES[item.roleIndex]) && typeof item.promoted === "boolean" &&
+    (item.demoted === undefined || typeof item.demoted === "boolean") &&
+    Number.isFinite(item.score) && Number.isFinite(item.netIncome) &&
+    (item.childCost === undefined || [0, 2].includes(item.childCost)) &&
+    (item.accountCredit === undefined || validCredit(item.accountCredit)) &&
+
+重生之我是公务员的一生（游戏软件） V1.0    第 27 页
+    (item.promotionMode === undefined || ["automatic", "legacy"].includes(item.promotionMode)) &&
+    (item.promotionChoice === undefined || ["apply", "defer", "pending", "legacy", "report", "dinner", "gift"].includes(item.promotionChoice)) &&
+    (item.promotionDetected === undefined || typeof item.promotionDetected === "boolean") &&
+    (item.competition === undefined || validOpportunity(item.competition)) &&
+    Array.isArray(item.reasons) && item.reasons.every((reason) => typeof reason === "string")))) return false;
+  if (!Array.isArray(state.queue) || state.queue.length > 2 || !state.queue.every((item) => ["work", "life", "city"].includes(item))) return false;
+  if (!Array.isArray(state.delayed) || state.delayed.length > 100 || !state.delayed.every((item) =>
+    record(item) && Number.isInteger(item.dueYear) && item.dueYear >= 1 && effects(item.effects) && typeof item.message === "string")) return false;
+  if (state.startOfYearResults !== undefined && (!Array.isArray(state.startOfYearResults) ||
+    !state.startOfYearResults.every((item) => record(item) && typeof item.message === "string" && effects(item.changes)))) return false;
+  const activeAssessment = events.find((event) => event.id === state.currentEventId && event.category === "assessment");
+  if (["event", "result"].includes(state.phase) && activeAssessment &&
+    (state.assessmentYear !== state.careerYear || promotionChoice(state) !== "apply" ||
+      (state.promotionPlan && state.promotionPlan.opportunity && !state.promotionPlan.opportunity.available) ||
+      state.queue.length !== 0 || !activeAssessment.roleLevels.includes(state.roleIndex))) return false;
+  if (state.phase === "event") return events.some((event) => event.id === state.currentEventId);
+  if (state.phase === "result") return historyEntry(state.lastResult) && events.some((event) => event.id === state.currentEventId);
+  if (state.phase === "review") {
+    const review = state.review;
+    return record(review) && ["baseScore", "randomShift", "finalScore", "threshold", "annualIncome", "livingCost"].every((key) => Number.isFinite(review[key])) &&
+      (review.competition === undefined || validOpportunity(review.competition)) &&
+      (state.promotionPlan && state.promotionPlan.opportunity
+        ? JSON.stringify(review.competition) === JSON.stringify(state.promotionPlan.opportunity)
+        : true) &&
+      (review.accountCredit === undefined || validCredit(review.accountCredit)) &&
+      (review.childCost === undefined || [0, 2].includes(review.childCost)) &&
+      (review.noNewStory === undefined || review.noNewStory === true) &&
+      (review.promotionMode === undefined || ["automatic", "legacy"].includes(review.promotionMode)) &&
+      (review.promotionChoice === undefined || review.promotionChoice === promotionChoice(state)) &&
+      (review.relationshipBonus === undefined || Number.isFinite(review.relationshipBonus)) &&
+      Math.abs(review.randomShift) <= 6 && typeof review.promoted === "boolean" &&
+      (review.demoted === undefined || typeof review.demoted === "boolean") &&
+      (!review.promoted || state.roleIndex < ROLES.length - 1) && Array.isArray(review.reasons) && review.reasons.every((item) => typeof item === "string") &&
+      (review.contributions === undefined || (Array.isArray(review.contributions) && review.contributions.every((item) =>
+        record(item) && typeof item.label === "string" && Number.isFinite(item.value) && Number.isFinite(item.weight) && Number.isFinite(item.score))));
+  }
+  if (state.phase === "planning") return state.currentEventId === null && state.review === null && state.queue.length === 0;
+  if (state.phase === "ending") return ENDINGS.some((ending) => ending.id === state.endingId);
+  return false;
+}
+
+module.exports = {
+  advanceAfterResult,
+  applyEffects,
+  beginYear,
+  calculateReview,
+  completeReview,
+  createNewGame,
+  drawEvent,
+  eligibleEvents,
+
+重生之我是公务员的一生（游戏软件） V1.0    第 28 页
+  eventTheme,
+  findCurrentEvent,
+  finalizeAnnualPlanning,
+  leaveCareer,
+  resolveEndingId,
+  selectChoice,
+  promotionChoice,
+  promotionActionReason,
+  PROMOTION_MOVES,
+  HIGH_POST_EVENT_PREFIXES,
+  outOfPostScope,
+  needsAssessment,
+  setPromotionChoice,
+  repairLegacyPacing,
+  repairRepetitiveCurrentTheme,
+  repairRepeatedCurrentEvent,
+  validateSavedGame
+};
+
+/* ===== 文件：src/data/endings.js ===== */
+"use strict";
+
+// Endings summarize fictional playthroughs. The criminal ending is a narrative
+// outcome, not a real-world sentencing calculator or legal conclusion.
+const ENDINGS = [
+  {
+    id: "criminal_conviction",
+    title: "法槌落下",
+    description: "收下的财物、作出的关照和后来掩盖的痕迹，最终在证据中连成了一条线。",
+    story: "宣判那天，你想起第一次到青禾镇报到的清晨。那时公文包里只有录用通知，你也曾认真相信，自己能够把每一件小事办得干净。"
+  },
+  {
+    id: "disciplinary_exit",
+    title: "边界失守",
+    description: "问题尚未走到刑事判决，却已经足以让你失去岗位和组织信任。",
+    story: "调离通知只有薄薄一页。收礼不登记、替熟人递话、把程序当作可以通融的小事——单看都像还能解释，合在一起却写出了另一份履历。"
+  },
+  {
+    id: "health_exit",
+    title: "先照顾好自己",
+    description: "长久透支让职业旅程提前结束。停下来不是失败，而是重新开始生活。",
+    story: "办公桌被收拾干净以后，家人把那张迟到多年的复查单重新放到你手里。窗外的会议仍在继续，这一次，你先跟他们回家。"
+  },
+  {
+    id: "results_only",
+    title: "只有成绩单",
+    description: "数字足够亮眼，但一些关系和健康被留在了表格之外。",
+    story: "告别会上念了很长一串项目名称。掌声停下后，你翻开手机，才发现家庭群里那张合照已经是很多年前的头像。"
+  },
+  {
+
+重生之我是公务员的一生（游戏软件） V1.0    第 29 页
+    id: "family_first",
+    title: "灯火可亲",
+    description: "你没有把每一步都押给职位，守住了许多不能重来的夜晚。",
+    story: "最后一个工作日没有隆重仪式。回家推开门，饭刚盛好，旧日历上还留着你亲手圈过的生日、复查和接孩子的日子。"
+  },
+  {
+    id: "high_office",
+    title: "责任所在",
+    description: "你走到协调全局的位置，也更加明白每个数字背后都是具体的人。",
+    story: "新的会议材料摊满长桌。你从最后一页翻回第一页，在那个看似普通的数字旁写下：请说明它会影响哪些人的生活。"
+  },
+  {
+    id: "public_legacy",
+    title: "一方留痕",
+    description: "职位终会交接，留下来的，是经住时间的工程和被认真回应过的人。",
+    story: "多年后的一场暴雨里，早年修过的管线没有再让老街积水。没人知道当年的会议开了多久，但有人记得问题终于被解决了。"
+  },
+  {
+    id: "clean_retirement",
+    title: "清白收卷",
+    description: "没有传奇，也没有捷径。你靠专业和耐心，把一份工作清清楚楚地做到了最后。",
+    story: "年轻同事来接档案，问你最重要的经验是什么。你想了很久，只把那本写满核验记录的旧笔记递给他：事情办完，还要经得住回头看。"
+  },
+  {
+    id: "new_beginning",
+    title: "履历未完",
+    description: "你主动离开既定路径。下一页没有职位名称，只有新的可能。",
+    story: "交回工作证时，你没有想象中轻松，也没有想象中后悔。走出大门，路口仍旧很忙，而这一次该往哪里走，由你自己决定。"
+  }
+];
+
+const LEGACY_ENDING_MAP = {
+  integrity_exit: "disciplinary_exit",
+  trusted_specialist: "clean_retirement",
+  quiet_retirement: "clean_retirement",
+  learning_path: "clean_retirement",
+  city_builder: "public_legacy",
+  public_trust: "public_legacy",
+  balanced_life: "family_first"
+};
+
+function migrateEndingId(id) {
+  return LEGACY_ENDING_MAP[id] || id;
+}
+
+function getEnding(id) {
+  const migrated = migrateEndingId(id);
+  return ENDINGS.find((ending) => ending.id === migrated) || ENDINGS.find((ending) => ending.id === "clean_retirement");
+}
+
+
+重生之我是公务员的一生（游戏软件） V1.0    第 30 页
+function getEndingPresentation(state) {
+  const ending = getEnding(state && state.endingId);
+  if (ending.id !== "criminal_conviction") return { ...ending, detail: "" };
+  const sentenceYears = [3, 7, 12].includes(state && state.accountability && state.accountability.sentenceYears)
+    ? state.accountability.sentenceYears
+    : 3;
+  const stories = {
+    3: "你在调查后期停止否认，如实说明并配合退缴。已经越过的边界没有因此消失。宣判后，家人带走了你进门前交出的那只旧手表。",
+    7: "那笔写成“旧账”的转账、经办人保存的复印件和前后矛盾的说明相互印证。直到宣判，你才明白每一次侥幸都在替下一次侥幸留下证据。",
+    12: "从递出的名片到异常分包，再到三百万元转账和带病通过的验收，项目损失与个人所得一起写进判决。你得到过短暂的方便，也失去了余下许多年的自由。"
+  };
+  return {
+    ...ending,
+    detail: `虚构剧情判决 · 有期徒刑 ${sentenceYears} 年`,
+    story: stories[sentenceYears]
+  };
+}
+
+module.exports = { ENDINGS, getEnding, getEndingPresentation, migrateEndingId };
+
+/* ===== 文件：src/data/events.js ===== */
+"use strict";
+
+const { FOLLOWUPS } = require("./followups");
+const { SENIOR_EVENTS } = require("./senior-events");
+const { CAREER_STORIES } = require("./career-stories");
+const { CAREER_FOLLOWUPS } = require("./career-followups");
+const { ETHICS_STORIES } = require("./ethics-stories");
+const { CHILD_STORIES } = require("./child-stories");
+const { ASSESSMENTS } = require("./assessments");
+const { DUTY_STORIES } = require("./duty-stories");
+const { LIFE_DILEMMAS } = require("./life-dilemmas");
+const { ENGAGING_WORK_STORIES } = require("./engaging-work-stories");
+const { DEPARTMENT_STORIES } = require("./department-stories");
+const { SECTOR_STORIES } = require("./sector-stories");
+const { MORE_SECTOR_STORIES } = require("./more-sector-stories");
+const { INTEGRITY_ASSESSMENTS } = require("./integrity-assessments");
+const { INSPECTION_CRISIS_STORIES } = require("./inspection-crisis-stories");
+const { ALL_ROLE_LEVELS } = require("../core/constants");
+
+const ALL_ROLES = ALL_ROLE_LEVELS;
+const EARLY_ROLES = [0, 1, 2];
+const MIDDLE_ROLES = [2, 3, 4, 5];
+const SENIOR_ROLES = [5, 6];
+
+const EVENTS = [
+  {
+    id: "work_shared_room",
+    once: true,
+    category: "work",
+
+重生之我是公务员的一生（游戏软件） V1.0    第 31 页
+    body: "镇里演示农业无人机，领导刚夸完‘科技兴农’，屏幕就黑了。飞手说山坳没信号，养羊大叔在旁边乐：‘它要真聪明，先帮我找那三只羊。’媒体镜头正对着你，羊也正好从主席台后面探出头。",
+    choices: [
+      { text: "先找羊，再把失败原因原样讲清", effects: { trust: 4, ability: 3, performance: -1 }, outcome: "演示从科技大片变成全镇找羊。三只羊找回来了，无人机的问题也写进改造清单。新闻标题不够威风，却有村民留言：这回总算不是拿我们当背景板。" },
+      { text: "换到有信号的田里重飞，后续再补山区测试", effects: { performance: 3, ability: 2, integrity: -1 }, outcome: "第二次起飞很顺，掌声也补上了。你随后安排真正的山区测试，发现设备还差得远。场面救回来了，采购标准也必须跟着现实重写。" },
+      { text: "宣布演示成功，黑屏只是现场网络波动", effects: { performance: 3, trust: -5, integrity: -4 }, outcome: "台上顺利收官，台下偷拍视频却完整记录了那句‘找不到信号’。第二天羊大叔成了网红，他对镜头说：‘羊找到了，成功在哪儿我还没找到。’" }
+    ]
+  },
+  {
+    id: "dept_agri_homestay_tractor", category: "work", once: true, roleLevels: [1, 2], storyTheme: "rural-tourism",
+    title: "网红民宿门口停着一台拖拉机",
+    body: "返乡青年把老院子改成民宿，开业当天，邻居把拖拉机横在门口：‘他家游客半夜唱歌，我家鸡都开始倒时差了。’博主已经开播，评论区一半要你拆民宿，一半想团购。",
+    choices: [
+      { text: "先把直播关小声，现场核许可、噪声和消防", effects: { ability: 4, trust: 3, health: -2 }, outcome: "许可证没问题，消防有两处要改，夜间噪声也确实超了。民宿限期整改，拖拉机挪开，鸡暂时不用继续上夜班。两边都没全赢，但都拿到了能执行的清单。" },
+      { text: "约定十点静音试营业，七天后拿数据复盘", effects: { performance: 3, trust: 2, integrity: 1 }, outcome: "民宿给每位客人发了‘十点后别逼鸡加班’提示卡，反而成了打卡梗。七天监测基本达标，邻居仍嫌游客多，却不再需要用拖拉机当投诉热线。" },
+      { text: "劝邻居给年轻人一点面子，先把车开走", effects: { performance: 2, trust: -6, integrity: -3 }, outcome: "开业直播顺利了，邻居转头把连续三晚的噪声视频发上网。你想保住的面子没保住，反倒多了一个问题：为什么投诉人必须先给生意让路？" }
+    ]
+  },
+  {
+    id: "dept_market_wedding_leftovers", category: "work", once: true, roleLevels: [3], storyTheme: "food-safety",
+    title: "婚宴还没开席，厨师先跑路了",
+    body: "酒店后厨被查出把昨晚剩菜重新摆盘，主厨见势不对从侧门溜了。楼上新人马上交换戒指，老板拉住你：‘今天封了，三十桌亲戚能把我吃了。’伴郎还跑下来问凉菜什么时候上。",
+    choices: [
+      { text: "问题菜立即封存，协调合格餐食救场", effects: { ability: 4, integrity: 4, performance: 1, health: -3 }, outcome: "凉菜没上，附近两家合规餐厅临时送来热菜。婚礼晚了四十分钟，新郎上台先说‘感谢大家没吃到昨天的’。笑声救了场，证据和后续处理也一项没少。" },
+      { text: "暂停后厨，逐批核验能否继续供餐", effects: { integrity: 4, performance: -1, trust: 2 }, outcome: "能证明当天制作的热菜保住了，来源说不清的全部撤下。老板心疼得直拍腿，新娘却说：少几个菜总比全家一起去医院团建强。" },
+      { text: "先让婚宴办完，晚上再补检查记录", effects: { performance: 3, integrity: -8, trust: -5 }, outcome: "婚礼如期开席，偷拍视频也如期上传。没有人严重不适算是侥幸，可老板面对采访时说‘检查的人同意先上菜’，把你的通融端上了全网最大的桌。" }
+    ]
+  },
+  {
+    id: "dept_market_influencer_shoes", category: "work", once: true, roleLevels: [3, 6], storyTheme: "consumer-protection",
+    title: "主播说鞋能跑赢高铁",
+    body: "头部主播卖一双‘量子增速鞋’，广告里说穿上能提升30%速度。团队解释这只是夸张修辞，仓库已经打包十万单。老板发来消息：‘今晚给您留个直播间专座，顺便聊聊营商环境。’",
+    choices: [
+      { text: "固定证据、叫停误导宣传，再处理退款", effects: { integrity: 5, ability: 3, performance: 1 }, outcome: "主播在镜头前改口：鞋不能跑赢高铁，只能正常走路。退款页面一度挤爆，企业抱怨损失大，消费者却第一次看见‘家人们冲’后面还跟着责任。" },
+      { text: "要求立即改词并公开说明，继续核查产品质量", effects: { performance: 3, trust: 2, integrity: 2 }, outcome: "直播标题从‘量子增速’改成‘穿着挺轻’，科学含量骤降，诚实含量上升。质量核查继续，已经下单的人获得明确退货入口。" },
+      { text: "先去直播间听解释，别伤了头部企业信心", effects: { performance: 2, integrity: -7, trust: -4 }, outcome: "你坐进了专座，主播立刻说‘有关方面也很关心我们的创新’。你一句背书都没说，画面却比任何句子都好用。第二天，投诉材料首页就是你的直播截图。" }
+    ]
+  },
+  {
+    id: "dept_justice_uncle_voice", category: "work", once: true, roleLevels: [4], storyTheme: "mediation-boundary",
+    title: "舅舅发来一段59秒语音",
+    body: "舅舅的朋友和邻居闹宅基地纠纷，他发来59秒语音，核心只有八个字：‘你出面，他们肯定听。’末尾还补一句：‘又不是案子，就是调解。’你看着手机，感觉亲情已经替你把会场都订好了。",
+    choices: [
+      { text: "说明关系并回避，把正规调解入口发给他", effects: { integrity: 5, family: -2, trust: 2 }, outcome: "舅舅回了一个冷冰冰的‘哦’。纠纷后来由属地依法调解，没有人因为认识你先拿到座位。过年见面时他仍念叨你不帮忙，至少没法说你替谁压过话。" },
+      { text: "只请属地确认是否已受理，不碰实体意见", effects: { ability: 2, integrity: 3, family: 1 }, outcome: "你得到的答复是材料缺一张图，便把公开补正要求转给舅舅。事情没有插队，语音也终于从59秒缩成两个字：收到。" },
+      { text: "亲自去坐一会儿，强调只是帮大家冷静", effects: { family: 3, integrity: -7, trust: -3 }, outcome: "你说了三次‘我不表态’，对方却只记住你坐在舅舅朋友那一边。调解没成功，另一方投诉时写得很简洁：有领导到场。你的沉默也被位置替你发了言。" }
+    ]
+  },
+  {
+    id: "dept_police_mascot", category: "work", once: true, roleLevels: [5], storyTheme: "public-communication",
+    title: "警务吉祥物先把自己锁车里了",
+
+重生之我是公务员的一生（游戏软件） V1.0    第 32 页
+    body: "反诈直播开场前，扮吉祥物的民警把钥匙落在车里，自己还穿着厚玩偶服。主持人倒数三分钟，围观学生已经笑成一片。宣传科问：‘要不要把孩子们先赶远点，别拍到这个事故？’",
+    choices: [
+      { text: "先救人，再拿这次乌龙讲一堂真反诈课", effects: { trust: 4, ability: 3, health: -2 }, outcome: "人很快出来了，吉祥物摘下头套第一句是：‘大家看，着急的时候最容易判断失误。’全场笑完反而听得更认真，这段没剪掉的乌龙成了当天传播最广的反诈片段。" },
+      { text: "调整流程让民警缓一缓，直播稍后开始", effects: { performance: 2, integrity: 2, trust: 1 }, outcome: "直播晚了十五分钟，学生围着消防人员看开锁。主持人临时把等待改成安全问答，没制造英雄，也没掩盖失误。" },
+      { text: "清场并要求删视频，直播必须准点开始", effects: { performance: 3, trust: -5, ability: -2 }, outcome: "官方直播准点，偷拍视频也准点传开。网友并不在意谁把钥匙落车里，倒是很在意为什么孩子被要求删掉笑声。一次小乌龙，被你的紧张升级成大尴尬。" }
+    ]
+  },
+  {
+    id: "dept_reform_boss_coffee", category: "work", once: true, roleLevels: [6], storyTheme: "business-lobbying",
+    title: "咖啡杯底压着一张厂房平面图",
+    body: "老同学说回乡投资，只想请你喝杯咖啡。聊到第三口，他从杯底抽出厂房图：‘项目没问题，就是能不能进重点清单？进了，银行那边好说。’服务员又端来一杯，杯套上印着‘友情无价’。",
+    choices: [
+      { text: "咖啡自己结账，项目回公开申报通道", effects: { integrity: 5, family: -1, performance: -1 }, outcome: "老同学盯着付款码说你见外。项目后来按同一套标准评审，技术可行，能耗指标却要重做。友情没有变成通行证，项目也没有因为你拒绝就被偷偷判死刑。" },
+      { text: "把共性困难带回公开企业座谈会", effects: { ability: 4, trust: 2, integrity: 3 }, outcome: "下一场座谈来了二十七家企业，大家都在问融资和清单标准。老同学坐在最后一排，散会时嘟囔：‘早知道要排队，我就不请咖啡了。’你说这句话总算说到点上。" },
+      { text: "先放进储备名单，后面再慢慢补条件", effects: { performance: 4, integrity: -9 }, accountability: { dutyAbuse: 2, concealment: 1, note: "为熟人项目绕开统一评审进入重点储备名单。" }, outcome: "项目进了清单，融资果然顺了。可正式复核时，评审人员问这条记录为何没有评分表。老同学的平面图能画出每扇门，唯独画不出他是怎么进名单的。" }
+    ]
+  },
+  {
+    id: "dept_reform_model_light", category: "work", once: true, roleLevels: [6, 9], storyTheme: "project-feasibility",
+    title: "沙盘亮得很，项目账上没钱",
+    body: "招商项目沙盘灯光一开，未来园区连树都会发光。你随口问资金来源，现场突然只剩空调声。企业代表笑着说：‘先签意向，钱会被信心吸引来。’摄影师举着相机，等你和那棵发光树合影。",
+    choices: [
+      { text: "灯先关一半，把资金和风险逐项摊开", effects: { ability: 5, integrity: 4, performance: -2 }, outcome: "沙盘暗下来，会议终于看得见人。项目被拆成可融资的一期和暂缓部分，签约仪式取消。当天没有喜报，半年后一期真的开工，发光树也换成了普通路灯。" },
+      { text: "签不具约束力的研究备忘录，设硬退出条件", effects: { performance: 3, ability: 3, integrity: 1 }, outcome: "合影保住了，但文件首页写着不构成投资承诺，三个月拿不出资金证明自动退出。企业代表笑得没那么亮，规则倒比沙盘清楚。" },
+      { text: "先签意向制造声势，融资问题交给市场", effects: { performance: 5, trust: -4, integrity: -4 }, outcome: "新闻当天很热闹，项目三个月后仍只有沙盘。企业拿签约照片去谈融资，外界则把你站在发光树旁的笑容当成政府担保。信心没吸来钱，倒吸来一堆解释。" }
+    ]
+  },
+  {
+    id: "dept_environment_monitor_cat", category: "work", once: true, roleLevels: [7], storyTheme: "environment-data",
+    title: "监测站里最守时的是一只猫",
+    body: "空气监测点连续三天在凌晨两点出现异常低值。值班员说设备会‘夜间自愈’，你调监控却看到一只橘猫每天准时趴在进气口旁，旁边还有人为移动设备的痕迹。企业群已经转发‘空气质量创纪录’。",
+    choices: [
+      { text: "封存原始数据，查猫也查人，异常先不评优", effects: { integrity: 5, ability: 4, performance: -2 }, outcome: "猫只是来取暖，设备却确实被人挪过位置。创纪录的喜报撤回，监测流程重做。值班员后来给猫买了窝，放得离进气口远远的——猫可以背锅一次，不能替人背第二次。" },
+      { text: "更换设备交叉监测，待复核后统一说明", effects: { ability: 4, performance: 2, health: -2 }, outcome: "新旧设备并排跑了两天，异常来自位置变化和校准问题。数据更正后不再漂亮，原因却能复现。橘猫照常打卡，只是失去了‘改善空气’的荣誉。" },
+      { text: "把异常归因于猫，先保留空气质量喜报", effects: { performance: 4, integrity: -7, trust: -4 }, outcome: "通报把设备异常写成动物干扰，网友给猫做了表情包。维修记录随后显示设备曾被人工搬动，大家才发现真正会‘自愈’的不是机器，是一份会改口径的报告。" }
+    ]
+  },
+  {
+    id: "dept_environment_purifier", category: "work", once: true, roleLevels: [7], storyTheme: "supplier-gift",
+    title: "办公室突然多了台‘样机’",
+    body: "治理项目评审前，供应商送来一台高端空气净化器，贴纸写着‘免费测试样机’。你让人查协议，对方秒回：‘不用签，领导呼吸好，大家工作才好。’机器已经在角落安静地显示空气优秀。",
+    choices: [
+      { text: "断电封存登记，核查供应商接触记录", effects: { integrity: 6, ability: 2, performance: -1 }, outcome: "净化器停止夸空气，供应商开始夸自己是误会。设备被登记处理，评审人员重新做利益冲突核查。办公室闷了两天，项目的空气反而清爽了一些。" },
+      { text: "立即退回，并给所有供应商发统一设备规则", effects: { integrity: 4, performance: 1, trust: 1 }, outcome: "对方当天拉走机器，项目组补了一条：没有测试协议的样机不得进场。后来真需要测试时，所有企业按同样条件送样，谁也不能靠关心领导呼吸抢先一步。" },
+      { text: "先试用到评审结束，反正不是送给个人", effects: { ability: 1, integrity: -9 }, accountability: { acceptedValue: 1.2, retainedValue: 1.2, concealment: 1, note: "在项目评审期接受供应商高价值设备并持续使用。" }, outcome: "机器每天显示空气优秀，聊天记录也每天提醒供应商问体验如何。评审结束后，对方说样机不必归还。你没把它搬回家，可它从第一天就不是来净化公共利益的。" }
+    ]
+  },
+  {
+    id: "dept_transport_last_bus", category: "work", once: true, roleLevels: [8], storyTheme: "public-transport",
+    title: "末班车把厅长也落下了",
+
+重生之我是公务员的一生（游戏软件） V1.0    第 33 页
+    body: "你临时不带随员体验城乡公交，结果末班车提前八分钟开走。站牌下还有六名乘客，一位大姐认出你：‘巧了，今天投诉对象自己也没车。’司机说要赶回场站打卡，调度中心说系统显示准点。",
+    choices: [
+      { text: "和乘客一起等加班车，完整核对调度记录", effects: { trust: 5, ability: 3, health: -3 }, outcome: "加班车四十分钟后到，你也挨了四十分钟的风和吐槽。后台发现司机终端时间快了八分钟，类似投诉还有十七条。大姐下车前说：‘这回不用我写八百字了吧？’" },
+      { text: "先安排车辆送乘客，再追系统和司机两条线", effects: { performance: 4, trust: 2, integrity: 2 }, outcome: "乘客先回家，核查没有停在‘服务到位’。系统时钟确有偏差，司机也长期被不合理打卡时间催赶。修的不只是钟，还有一条逼人提前走的考核规则。" },
+      { text: "给场站负责人打电话，只要求马上派车来接你", effects: { performance: 2, integrity: -6, trust: -6 }, outcome: "专车十分钟就到，六名乘客却被告知继续等正常班次。有人拍下你先上车的画面，标题非常省字：末班车没等群众，群众等来了厅长。" }
+    ]
+  },
+  {
+    id: "dept_transport_asphalt", category: "work", once: true, roleLevels: [8, 9], storyTheme: "project-quality",
+    title: "公路刚通车，鞋底先粘住了",
+    body: "重点公路通车仪式前，记者踩上路面，鞋底竟粘下一小块沥青。施工方说只是高温，项目负责人小声求你：‘剪完彩再取样，横幅都挂了。’剪刀已经递到你手里，红绸在风里特别努力。",
+    choices: [
+      { text: "剪刀放下，封闭问题路段立即取样", effects: { integrity: 5, ability: 4, performance: -3 }, outcome: "仪式取消，横幅成了当天最没用的东西。检测发现局部施工温度控制异常，返工后才重新开放。新闻不好看，但至少没人用轮胎替项目做第二次取样。" },
+      { text: "安全路段试通行，问题区隔离复检", effects: { ability: 3, performance: 2, integrity: 2 }, outcome: "红绸没剪，运送急需物资的车辆从合格路段低速通过。问题区很快圈定，返工范围也没有被扩大成整条路。项目晚了，交通没被一刀切断。" },
+      { text: "先完成仪式，解释为天气导致的表层现象", effects: { performance: 5, integrity: -8, trust: -5 }, outcome: "剪彩照片按时发出，记者的鞋底照片更快。当天傍晚项目封闭返检，群众看着上午的喜报问：到底是路一日游，还是我们被当成了试车员？" }
+    ]
+  },
+  {
+    id: "dept_province_school_lunch", category: "work", once: true, roleLevels: [9], storyTheme: "education-food",
+    title: "孩子把午餐拍成了‘考古现场’",
+    body: "学生把学校午餐拍上网：一块肉藏在两片土豆下面，配文‘今日考古成果’。教育部门说营养标准达标，市场监管说食材合格，家长问的是肉去哪了。你分管多部门，会议刚开始，食堂供应商的老板就托熟人发来饭局定位。",
+    choices: [
+      { text: "饭局不去，随机抽校陪孩子吃一周", effects: { trust: 5, ability: 3, health: -2 }, outcome: "第一天大家吃得格外好，第三天你临时换学校，终于吃到那份‘考古餐’。问题不在单次检测，而在分量、验收和结算脱节。孩子们后来继续拍照，只是照片里终于不用找肉。" },
+      { text: "把克重、采购和每日菜单一起公开", effects: { integrity: 4, performance: 3, trust: 2 }, outcome: "家长能看到合同里的肉有多少，也能看到盘子里实际有多少。供应商解释损耗，学生负责继续‘民间称重’。玩笑没有消失，账却越来越难糊弄。" },
+      { text: "先让学校整改摆盘，别把个例升级成全省问题", effects: { performance: 3, integrity: -5, trust: -6 }, outcome: "第二天土豆摆得很艺术，肉还是那么小。更多学校学生加入‘考古’，大家甚至做出排行榜。你想把问题压成个例，孩子们用午餐把它拼成了一张地图。" }
+    ]
+  },
+  {
+    id: "dept_province_ambulance", category: "work", once: true, roleLevels: [9], storyTheme: "health-emergency",
+    title: "救护车到了，村口的树不让进",
+    body: "山区急救转运时，救护车被村口限高杆和一棵歪树卡住。卫健部门说车辆符合标准，交通部门说村道不归主干网，乡镇说树是村民的。患者家属在电话里吼：‘你们先决定树归谁，人还等着呢！’",
+    choices: [
+      { text: "先用最近力量接驳救人，责任问题随后拆清", effects: { ability: 5, trust: 4, health: -3 }, outcome: "医护带设备步行接入，农用车完成短距离转运，患者及时送医。天亮后限高和通行障碍逐项整改。树归谁可以开会，人等不起会议纪要。" },
+      { text: "建立急救通道清单，先排查同类高风险村", effects: { performance: 4, ability: 4, trust: 1, health: -2 }, outcome: "当天障碍清除，随后全省筛出一批救护车进不去的村。名单不漂亮，却让各部门第一次围着‘车能不能到床边’而不是‘路归谁管’安排预算。" },
+      { text: "要求属地自行解决，省里不替基层包办", effects: { performance: 2, trust: -7, integrity: -4 }, outcome: "属地最终也解决了，可耽误的时间写进了病历。新闻发布会上没人讨论层级边界，只反复播放家属那句话：人还等着呢。你的原则听起来完整，落地时却少了最急的一段。" }
+    ]
+  },
+  {
+    id: "dept_housing_elevator", category: "work", once: true, roleLevels: [2, 6, 9], storyTheme: "housing-community",
+    title: "一楼说不坐，六楼说快爬不动了",
+    body: "老楼加装电梯表决卡住。一楼住户把椅子搬到门口：‘我一次不坐，凭什么掏钱？’六楼老人扶着栏杆慢慢下来：‘我不装，可能以后连反对会都下不来。’施工企业又催补贴窗口快关了。",
+    choices: [
+      { text: "把采光、噪声、费用和补偿逐户摊开谈", effects: { ability: 4, trust: 4, performance: -2, health: -2 }, outcome: "会开了三晚，所有人都至少拍过一次桌子。方案调整连廊、分摊和补偿后通过，一楼仍不喜欢这部电梯，但不再觉得自己只收到一句‘少数服从多数’。" },
+      { text: "先做专业评估和可逆方案，再重新表决", effects: { integrity: 4, ability: 3, performance: -1 }, outcome: "补贴窗口差点错过，设计单位赶出两个替代方案。六楼老人说慢一点也行，只要不是永远没下文。第二次表决时，争论终于围绕具体方案而不是互相猜心。" },
+      { text: "赶在窗口关闭前开工，反对意见以后再协调", effects: { performance: 4, trust: -7, integrity: -5 }, outcome: "施工围挡一夜立起，一楼住户第二天就坐在挖掘机前直播。补贴保住了，工程却停了。你抢到的是开工日期，不是一部能真正建成的电梯。" }
+    ]
+  },
+  {
+    id: "dept_culture_star_rain", category: "work", once: true, roleLevels: [6, 9], storyTheme: "culture-event-safety",
+    title: "明星到了，暴雨也来走红毯",
+
+重生之我是公务员的一生（游戏软件） V1.0    第 34 页
+    body: "文旅节开幕前半小时，气象台升级暴雨预警。明星团队说只唱两首歌，观众淋点雨更有氛围；安保负责人指着积水图：‘再等十分钟，出口可能先有氛围。’热搜词条已经买好，就差你点头。",
+    choices: [
+      { text: "取消现场演出，先把观众分区疏散", effects: { integrity: 4, trust: 3, performance: -3, health: -2 }, outcome: "嘘声比雷声先到，明星改在室内直播清唱。半小时后广场积水没过脚踝，刚才骂退票的人开始帮忙转发疏散路线。热搜还在，只是词条从开幕变成了安全回家。" },
+      { text: "缩短流程并开放更多出口，随时硬停", effects: { ability: 4, performance: 3, trust: -1, health: -3 }, outcome: "演出只唱一首，第二首前雨势触发停演。观众意犹未尽，疏散却没有挤成一团。这是一次险些被掌声拖延的决定，复盘时你把硬停阈值写得比节目单更大。" },
+      { text: "按原计划办，已经投入这么多不能白花", effects: { performance: 5, trust: -7, integrity: -5 }, outcome: "第一首歌还没结束，出口积水导致人群回流。活动紧急中止，没有造成更严重后果，但现场视频里主持人还在喊‘坚持就是热爱’。后来大家问的不是花了多少钱，而是谁把沉没成本当成了天气预报。" }
+    ]
+  }
+];
+
+SECTOR_STORIES.forEach((event) => { event.contentTag = "跨部门小剧场 · 虚构"; });
+
+module.exports = { SECTOR_STORIES };
+
+/* ===== 文件：src/data/senior-events.js ===== */
+"use strict";
+
+// Fictional cases for broader administrative responsibilities, not real policy events.
+const PROVINCIAL = [7, 8, 9];
+const NATIONAL = [10];
+const SENIOR_EVENTS = [
+  {
+    id: "province_budget", category: "work", once: true, title: "省级预算的取舍", roleLevels: PROVINCIAL,
+    body: "省内几个地级市同时申请新增建设资金。经济较强的城市承诺见效快，欠发达地区则急需补齐公共服务短板。你需要提出统筹意见。",
+    choices: [
+      { text: "向薄弱地区倾斜，分阶段验收", effects: { trust: 4, integrity: 3, performance: 1, health: -2 } },
+      { text: "先支持成熟项目，追踪带动效果", effects: { performance: 5, ability: 2, trust: -2 } },
+      { text: "组织联合论证后分批下达", effects: { ability: 4, integrity: 2, performance: -1, health: -2 } }
+    ]
+  },
+  {
+    id: "province_personnel", category: "work", once: true, title: "一份干部考察材料", roleLevels: PROVINCIAL,
+    body: "干部考察材料摆到案头：一名候选人项目推进快，但基层反映其工作方式急躁。你需要提出是否进一步考察的意见。",
+    choices: [
+      { text: "补充基层访谈再提出意见", effects: { integrity: 4, trust: 3, performance: -1 } },
+      { text: "建议交流锻炼，持续观察", effects: { ability: 3, performance: 2, trust: 1 } },
+      { text: "要求量化核验项目实际成效", effects: { ability: 4, performance: 3, health: -2 } }
+    ]
+  },
+  {
+    id: "province_basin", category: "city", once: true, title: "跨市流域协调", roleLevels: PROVINCIAL,
+    body: "上游城市发展产业，下游城市承担了更多水环境治理成本。两地谈了数轮仍未达成一致，问题提交省级协调。",
+    choices: [
+      { text: "协商共同监测与成本分担", effects: { ability: 4, trust: 3, performance: 2, health: -3 } },
+      { text: "先给紧急治理资金再完善机制", effects: { performance: 5, trust: 1, integrity: -1 } },
+      { text: "组织第三方评估后明确责任", effects: { integrity: 4, ability: 2, performance: -2 } }
+    ]
+  },
+  {
+    id: "national_coordination", category: "work", once: true, title: "一项跨区域协调议题", roleLevels: NATIONAL,
+    body: "多个地区对同一项公共服务协作方案提出不同诉求。你面对的是整体制度安排，需要让执行责任、资源分配与监督方式相互匹配。",
+
+重生之我是公务员的一生（游戏软件） V1.0    第 35 页
+    choices: [
+      { text: "形成共同底线，允许分区试点", effects: { ability: 4, trust: 3, performance: 3, health: -3 } },
+      { text: "先统一服务标准，再分步落实", effects: { performance: 5, integrity: 2, trust: -1 } },
+      { text: "安排公开评估并持续征求意见", effects: { integrity: 4, trust: 4, performance: -2 } }
+    ]
+  },
+  {
+    id: "national_review", category: "work", once: true, title: "成绩之外的回访", roleLevels: NATIONAL,
+    body: "一份汇总报告显示工作进展顺利，但抽样回访发现部分地区的群众办事体验仍未改善。你需要提出下一阶段的督促重点。",
+    choices: [
+      { text: "以实际办事体验重新核验成效", effects: { integrity: 4, trust: 4, performance: -2, health: -2 } },
+      { text: "保留进度安排，增加现场回访", effects: { performance: 4, ability: 3, health: -3 } },
+      { text: "先解决集中反映的共性问题", effects: { performance: 5, trust: 2, ability: 1 } }
+    ]
+  },
+  {
+    id: "national_emergency", category: "city", once: true, title: "跨区域应急协作", roleLevels: NATIONAL,
+    body: "多个地区同时面临极端天气，救援物资与专业队伍需要统筹调配。你需要兼顾当前救助和后续恢复的衔接。",
+    choices: [
+      { text: "优先保障受影响最严重的地区", effects: { trust: 5, integrity: 3, performance: 2, health: -3 } },
+      { text: "协调区域互助并设立动态调度", effects: { ability: 5, performance: 4, health: -4 } },
+      { text: "同步安排救助与恢复阶段计划", effects: { performance: 3, ability: 3, trust: 2, health: -2 } }
+    ]
+  }
+];
+
+module.exports = { SENIOR_EVENTS };
+
+/* ===== 文件：src/ui/app.js ===== */
+"use strict";
+
+const { ATTRIBUTE_LABELS, ATTRIBUTES, BACKGROUNDS, ROLES, CIVIL_RANKS, MAX_CAREER_YEARS, START_AGE } = require("../core/constants");
+const {
+  advanceAfterResult,
+  beginYear,
+  calculateReview,
+  completeReview,
+  createNewGame,
+  finalizeAnnualPlanning,
+  findCurrentEvent,
+  leaveCareer,
+  PROMOTION_MOVES,
+  promotionActionReason,
+  setPromotionChoice,
+  selectChoice,
+  repairLegacyPacing,
+  repairRepetitiveCurrentTheme,
+  repairRepeatedCurrentEvent,
+  validateSavedGame
+} = require("../core/engine");
+
+重生之我是公务员的一生（游戏软件） V1.0    第 36 页
+const { EVENTS } = require("../data/events");
+const { ENDINGS, getEndingPresentation } = require("../data/endings");
+const platform = require("../platform/wechat");
+const { HOUSING, RELATIONSHIPS, ACTIONS, getLifeState, childAge, annualChildCost, actionReason, takeLifeAction } = require("../core/life");
+const { ACCOUNT_RATES, getAccounts, homeFunding } = require("../core/accounts");
+
+const COLORS = {
+  background: "#0c1118",
+  paper: "#151e2b",
+  ink: "#e8edf5",
+  muted: "#a5b2c5",
+  teal: "#24c99a",
+  tealDark: "#69debe",
+  mint: "#bde8dc",
+  gold: "#ddba7c",
+  red: "#ff969c",
+  line: "#2c394b",
+  white: "#f5f7fb",
+  header: "#111a26",
+  buttonInk: "#08251b"
+};
+
+const TRANSFER_LABELS = { automatic: "年终组织评定", legacy: "旧版年度考核" };
+
+// 《微信小游戏运营规范》2.6.2：游戏开始前必须在画面显著位置全文登载《健康游戏忠告》。
+// The wording is fixed by the platform; do not paraphrase or shorten it.
+const HEALTH_ADVICE = "抵制不良游戏，拒绝盗版游戏。注意自我保护，谨防受骗上当。适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。";
+
+const CAREER_STAGES = [
+  "基层起步", "基层历练", "副科履新", "副科历练", "正科主政",
+  "县处历练", "市级主政", "厅局履新", "厅局主政", "综合领导", "全局协调"
+];
+
+function currentYearChanges(state) {
+  return (state.history || []).filter((entry) => entry.year === state.careerYear)
+    .reduce((result, entry) => {
+      ATTRIBUTES.forEach((key) => { result[key] += entry.changes[key] || 0; });
+      return result;
+    }, Object.fromEntries(ATTRIBUTES.map((key) => [key, 0])));
+}
+
+function householdBalance(state) {
+  const life = getLifeState(state);
+  const accounts = getAccounts(state);
+  const cash = Math.max(0, state.assets);
+  const fixedAssets = (life.housing === "owned" ? 50 : 0) + (life.vehicle ? 8 : 0);
+  const restricted = accounts.housingFund + accounts.annuity;
+  const debt = Math.max(0, -state.assets);
+  return { cash, fixedAssets, restricted, debt, netAssets: cash + fixedAssets + restricted - debt };
+}
+
+重生之我是公务员的一生（游戏软件） V1.0    第 37 页
+
+function compactNarrative(value, limit) {
+  if (typeof value !== "string") return "";
+  const text = value.replace(/\s+/g, " ").trim();
+  if (text.length <= limit) return text;
+  const sentences = text.match(/[^。！？!?]+[。！？!?]?/g) || [text];
+  let result = "";
+  for (const sentence of sentences) {
+    if (result && result.length + sentence.length > limit) break;
+    if (!result && sentence.length > limit) return `${text.slice(0, limit - 1)}…`;
+    result += sentence;
+  }
+  if (result.length < limit * 0.6) return `${text.slice(0, limit - 1)}…`;
+  return result.length < text.length ? `${result.replace(/[。！？!?]$/, "")}…` : result;
+}
+
+const ENDING_HINTS = {
+  criminal_conviction: "收钱、用权和掩盖一旦连成证据，履历会在哪里终止？",
+  disciplinary_exit: "尚未构成刑事判决，也不代表越过边界没有代价。",
+  health_exit: "一直透支身体，会在哪一年停下脚步？",
+  family_first: "职位之外，那盏等你回家的灯也很重要。",
+  high_office: "从乡镇科员走向市级部门正职及更高岗位，这一世能走多远？",
+  public_legacy: "有些投入，要许多年后才能看见回报。",
+  clean_retirement: "专业、耐心和清白，也是一份完整的履历。",
+  results_only: "如果只有成绩亮眼，其他代价谁来承担？",
+  new_beginning: "也许可以主动翻开另一种人生。"
+};
+
+class GameApp {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.context = canvas.getContext("2d");
+    this.scrollY = 0;
+    this.panel = null;
+    this.notice = "";
+    this.buttons = [];
+    this.screen = "home";
+    this.state = null;
+    this.gesture = null;
+    this.applyMetrics();
+    this.savedGame = platform.loadGame();
+    this.archive = platform.loadArchive();
+    if (!validateSavedGame(this.savedGame)) {
+      if (this.savedGame) this.notice = "旧存档无法读取，已保留原数据；新开局将替换它。";
+      this.savedGame = null;
+    } else if (this.savedGame) {
+      const deduplicated = repairRepeatedCurrentEvent(this.savedGame, EVENTS);
+      const themeRepaired = repairRepetitiveCurrentTheme(deduplicated, EVENTS);
+      const repaired = repairLegacyPacing(themeRepaired);
+      const duplicateRepaired = deduplicated !== this.savedGame;
+
+重生之我是公务员的一生（游戏软件） V1.0    第 38 页
+      const themeWasRepaired = themeRepaired !== deduplicated;
+      const pacingRepaired = repaired !== themeRepaired;
+      if (repaired !== this.savedGame) {
+        this.savedGame = repaired;
+        platform.saveGame(repaired);
+        this.notice = duplicateRepaired || themeWasRepaired
+          ? "已替换旧存档中重复或雷同的待选故事。"
+          : pacingRepaired ? "旧存档已切换为一年一个主故事。" : "旧存档已更新。";
+      }
+    }
+    platform.setPreferredFramesPerSecond(30);
+    platform.onTouchStart((event) => this.handleTouch(event));
+    platform.onTouchMove((event) => this.handleMove(event));
+    platform.onTouchEnd((event) => this.handleEnd(event));
+    platform.onTouchCancel(() => { this.gesture = null; });
+    // Returning to the foreground or a window-metric change can leave a stale
+    // or blank frame (and can move the safe area) while a story is open.
+    platform.onShow(() => this.handleResume());
+    platform.onWindowResize(() => this.handleResume());
+    platform.onHide(() => { this.gesture = null; });
+    this.render();
+  }
+
+  // Re-read the device metrics and resize the backing canvas. Assigning
+  // canvas.width also resets the 2D transform, so the pixel-ratio scale is
+  // applied exactly once per call.
+  applyMetrics() {
+    this.metrics = platform.getWindowMetrics();
+    this.width = this.metrics.width;
+    this.viewportHeight = this.metrics.height;
+    this.topInset = (this.metrics.safeArea ? this.metrics.safeArea.top : 0) + 44;
+    this.bottomInset = this.metrics.safeArea ? Math.max(0, this.viewportHeight - this.metrics.safeArea.bottom) : 0;
+    this.height = Math.max(708, this.viewportHeight - this.topInset - this.bottomInset);
+    this.pixelRatio = this.metrics.pixelRatio;
+    this.canvas.width = Math.round(this.width * this.pixelRatio);
+    this.canvas.height = Math.round(this.viewportHeight * this.pixelRatio);
+    this.context.scale(this.pixelRatio, this.pixelRatio);
+    this.contentHeight = this.height;
+  }
+
+  handleResume() {
+    // Drop any half-finished gesture so a touch interrupted by backgrounding
+    // cannot register as a tap after the player comes back.
+    this.gesture = null;
+    this.applyMetrics();
+    this.render();
+    const clamped = Math.max(0, Math.min(this.scrollY, this.maxScroll()));
+    if (clamped !== this.scrollY) { this.scrollY = clamped; this.render(); }
+  }
+
+
+重生之我是公务员的一生（游戏软件） V1.0    第 39 页
+  handleTouch(event) {
+    const touch = event.touches && event.touches[0];
+    if (!touch) return;
+    this.gesture = { x: touch.clientX, y: touch.clientY, scrollY: this.scrollY, moved: false };
+  }
+
+  handleMove(event) {
+    const touch = event.touches && event.touches[0];
+    if (!touch || !this.gesture) return;
+    const delta = touch.clientY - this.gesture.y;
+    if (Math.abs(delta) > 8 || Math.abs(touch.clientX - this.gesture.x) > 8) this.gesture.moved = true;
+    this.scrollY = Math.max(0, Math.min(this.maxScroll(), this.gesture.scrollY - delta));
+    this.render();
+  }
+
+  handleEnd(event) {
+    const touch = event.changedTouches && event.changedTouches[0];
+    const gesture = this.gesture;
+    this.gesture = null;
+    if (!touch || !gesture || gesture.moved || Math.hypot(touch.clientX - gesture.x, touch.clientY - gesture.y) > 8) return;
+    if (touch.clientY < this.topInset || touch.clientY > this.viewportHeight - this.bottomInset) return;
+    const x = touch.clientX;
+    const y = touch.clientY - this.topInset + this.scrollY;
+    const target = [...this.buttons].reverse().find((button) => (
+      x >= button.x && x <= button.x + button.width &&
+      y >= button.y && y <= button.y + button.height
+    ));
+    if (target) target.onPress();
+  }
+
+  maxScroll() {
+    return Math.max(0, this.contentHeight - (this.viewportHeight - this.topInset - this.bottomInset));
+  }
+
+  saveAndRender() {
+    if (this.state && this.state.phase !== "event" && this.panel && this.panel.id === "desk") this.panel = null;
+    if (this.state) {
+      const saved = platform.saveGame(this.state);
+      if (saved) this.archive = platform.loadArchive();
+      this.notice = saved ? "" : "保存失败：本次进度仅在内存中，请勿关闭游戏。";
+      this.savedGame = this.state;
+    }
+    this.render();
+  }
+
+  startGame(backgroundId) {
+    if (this.savedGame && !this.replaceConfirmed) {
+      this.confirm("新开局将替换当前进度，已完成的结局收藏会保留。", () => {
+        this.replaceConfirmed = true;
+        this.startGame(backgroundId);
+
+重生之我是公务员的一生（游戏软件） V1.0    第 40 页
+      });
+      return;
+    }
+    this.replaceConfirmed = false;
+    this.state = beginYear(createNewGame(backgroundId), EVENTS);
+    this.screen = "play";
+    this.panel = { id: "desk" };
+    this.saveAndRender();
+  }
+
+  continueGame() {
+    if (!this.savedGame) return;
+    // Saves made by the immediately previous build may be parked on the now
+    // removed manual year-end step. Settle them on resume so nobody is stuck.
+    const legacyPlanning = this.savedGame.phase === "planning";
+    this.state = legacyPlanning ? finalizeAnnualPlanning(this.savedGame) : this.savedGame;
+    this.screen = "play";
+    this.panel = legacyPlanning ? null : { id: "desk" };
+    if (legacyPlanning) this.saveAndRender();
+    else this.render();
+  }
+
+  render() {
+    const key = `${this.screen}:${this.panel ? this.panel.id : ""}:${this.state ? `${this.state.phase}:${this.state.currentEventId}:${this.state.careerYear}` : ""}`;
+    if (key !== this.renderKey) this.scrollY = 0;
+    this.renderKey = key;
+    this.buttons = [];
+    this.contentHeight = this.height;
+    this.context.clearRect(0, 0, this.width, this.viewportHeight);
+    this.context.fillStyle = COLORS.background;
+    this.context.fillRect(0, 0, this.width, this.viewportHeight);
+    this.context.save();
+    this.context.beginPath();
+    this.context.rect(0, this.topInset, this.width, this.viewportHeight - this.topInset - this.bottomInset);
+    this.context.clip();
+    this.context.translate(0, this.topInset - this.scrollY);
+    if (this.panel) this.renderPanel();
+    else if (this.screen === "home") this.renderHome();
+    else if (this.screen === "background") this.renderBackgrounds();
+    else this.renderPlay();
+    this.context.restore();
+    if (this.notice) this.text(this.notice, 12, this.viewportHeight - 12, 11, COLORS.red);
+    else if (this.maxScroll() > 0) this.text("上下滑动查看", this.width / 2, this.viewportHeight - 10, 11, COLORS.muted, "center");
+  }
+
+  confirm(message, action) {
+    this.panel = { id: "confirm", message, action };
+    this.render();
+  }
+
+
+重生之我是公务员的一生（游戏软件） V1.0    第 41 页
+  renderPanel() {
+    this.drawHeader();
+    if (this.panel.id === "desk") {
+      this.renderDashboard();
+      if (this.state && this.state.phase === "event" && this.state.appointment) {
+        this.buttons = [];
+        this.renderAppointment();
+      }
+      return;
+    }
+    if (["profile", "lifeActions", "career", "lifeResult"].includes(this.panel.id)) { this.renderLifePanel(); return; }
+    if (this.panel.id === "attribute") { this.renderAttributePanel(); return; }
+    if (this.panel.id === "history") { this.renderHistory(); return; }
+    if (this.panel.id === "rules") { this.renderRules(); return; }
+    if (this.panel.id === "promotion") { this.renderPromotionPanel(); return; }
+    if (this.panel.id === "accounts") { this.renderAccountsPanel(); return; }
+    if (this.panel.id === "collection") { this.renderCollection(); return; }
+    if (this.panel.id === "confirm") {
+      const lines = this.wrapText(this.panel.message, 28, 148, this.width - 56, 28, 17, COLORS.ink);
+      const confirmY = Math.max(266, 148 + lines * 28 + 24);
+      this.button("确认", 28, confirmY, this.width - 56, 54, () => {
+        const action = this.panel.action;
+        this.panel = null;
+        action();
+      });
+      this.button("取消", 28, confirmY + 70, this.width - 56, 54, () => { this.panel = null; this.render(); }, { secondary: true });
+      return;
+    }
+    this.text("本地存档与游戏选项", 24, 122, 22, COLORS.ink, "left", "600");
+    this.wrapText("进度只保存在本设备。清理微信缓存或删除此小游戏可能丢失存档；当前没有云同步。", 28, 162, this.width - 56, 25, 15, COLORS.muted);
+    this.button("返回上一页", 28, 268, this.width - 56, 54, () => { this.panel = null; this.render(); });
+    this.button("回到首页", 28, 336, this.width - 56, 54, () => { this.panel = null; this.screen = "home"; this.render(); }, { secondary: true });
+    this.button("删除本地数据", 28, 404, this.width - 56, 54, () => this.confirm("将删除本设备的游戏进度与结局收藏，无法恢复。确认删除？", () => {
+      if (!platform.clearGame()) { this.notice = "删除失败，请重试。"; this.render(); return; }
+      this.state = null;
+      this.savedGame = null;
+      this.archive = [];
+      this.notice = "";
+      this.screen = "home";
+      this.render();
+    }), { secondary: true });
+    if (this.state && this.state.phase === "event") {
+      this.button("主动离任，结算本局", 28, 472, this.width - 56, 54, () => this.confirm("主动离任会结束本局，无法撤销。确认继续？", () => {
+        this.state = leaveCareer(this.state);
+        this.screen = "play";
+        this.saveAndRender();
+      }), { secondary: true });
+    }
+    if (this.state || this.savedGame) {
+      this.button("回看本局履历", 28, 540, this.width - 56, 54, () => {
+
+重生之我是公务员的一生（游戏软件） V1.0    第 42 页
+        this.panel = { id: "history", page: 0 };
+        this.render();
+      }, { secondary: true });
+    }
+    this.button("岗位条件与玩法说明", 28, 608, this.width - 56, 54, () => {
+      this.panel = { id: "rules" };
+      this.render();
+    }, { secondary: true });
+  }
+
+  renderCollection() {
+    const unlocked = new Set(this.archive.map((item) => item.endingId));
+    this.text("人生的不同答案", 24, 110, 24, COLORS.ink, "left", "600");
+    this.text(`已发现 ${unlocked.size} / ${ENDINGS.length} 种结局`, 24, 140, 14, COLORS.muted);
+    let y = 178;
+    ENDINGS.forEach((ending, index) => {
+      this.text(unlocked.has(ending.id) ? ending.title : `待书写的第 ${index + 1} 页`, 28, y, 18, unlocked.has(ending.id) ? COLORS.tealDark : COLORS.muted, "left", "600");
+      y += 29;
+      const description = unlocked.has(ending.id) ? ending.description : ENDING_HINTS[ending.id];
+      y += this.wrapText(description, 28, y, this.width - 56, 23, 14, COLORS.muted) * 23 + 34;
+    });
+    this.button("返回首页", 28, y, this.width - 56, 52, () => { this.panel = null; this.screen = "home"; this.render(); });
+  }
+
+  renderDashboard() {
+    const state = this.state || this.savedGame;
+    if (!state) return;
+    const role = ROLES[state.roleIndex];
+    const nextRole = ROLES[state.roleIndex + 1];
+    const life = getLifeState(state);
+    const accounts = getAccounts(state);
+    const review = state.review || calculateReview(state);
+    const yearChanges = currentYearChanges(state);
+    const balance = householdBalance(state);
+    const projectedNet = review.annualIncome - review.livingCost;
+    const firstStory = state.phase === "event" && state.careerYear === 1 && !(state.history || []).length;
+    const workLabel = state.phase === "planning" || state.phase === "review"
+      ? "查看年终结果"
+      : state.phase === "ending" ? "查看人生结局"
+        : firstStory ? "开始我的仕途" : "继续剧情";
+    const openStory = () => { this.state = state; this.screen = "play"; this.panel = null; this.render(); };
+    const openPromotion = () => { this.panel = { id: "promotion", returnTo: "desk" }; this.render(); };
+    const openLife = () => {
+      if (!["event", "planning"].includes(state.phase)) {
+        this.notice = "人生安排需在本年度工作结束前完成";
+        this.render();
+        return;
+      }
+      this.panel = { id: "lifeActions", returnTo: "desk" };
+      this.render();
+
+重生之我是公务员的一生（游戏软件） V1.0    第 43 页
+    };
+
+    this.text(`第 ${state.careerYear} 年 · ${START_AGE + state.careerYear - 1} 岁`, 18, 82, 13, COLORS.gold, "left", "600");
+    this.text(`仕途阶段：${CAREER_STAGES[state.roleIndex]}`, this.width - 18, 82, 12, COLORS.muted, "right");
+
+    const heroTop = 96;
+    this.roundedRect(16, heroTop, this.width - 32, 174, 14, COLORS.paper, COLORS.line);
+    const roleTitleSize = role.name.length > 14 ? 16 : role.name.length > 10 ? 19 : 22;
+    this.text(role.name, 30, heroTop + 31, roleTitleSize, COLORS.ink, "left", "700");
+    this.text(`${role.department} · ${role.scope}`, 30, heroTop + 57, 13, COLORS.tealDark);
+    const rank = state.roleIndex < 7 ? CIVIL_RANKS[state.rankIndex] : "职级不适用";
+    this.text(`${role.level || "非领导岗位"} · ${rank}`, 30, heroTop + 80, 12, COLORS.muted);
+    const lifeLine = `${life.housing === "owned" ? "有房" : "租住"} · ${life.vehicle ? "有车" : "无车"} · ${RELATIONSHIPS[life.relationship]} · ${life.child ? `${life.child.name} ${childAge(state)} 岁` : "子女 0"}`;
+    this.text(lifeLine, 30, heroTop + 102, 11, COLORS.muted);
+    this.text(`🎯 当前目标：完成${role.scope}年度治理任务`, 30, heroTop + 124, 11, COLORS.gold);
+    const conditions = nextRole
+      ? `晋升条件：任职≥${role.minYears}年｜政绩≥${role.minPerformance}｜廉洁≥${role.minIntegrity}｜综合≥${role.threshold}`
+      : "当前已到履历最高阶段，继续接受年度组织评价";
+    this.text(conditions, 30, heroTop + 146, this.width <= 340 ? 9 : 10, COLORS.muted);
+    const progressWidth = this.width - 60;
+    this.roundedRect(30, heroTop + 160, progressWidth, 4, 2, COLORS.line);
+    this.roundedRect(30, heroTop + 160, progressWidth * (state.roleIndex + 1) / ROLES.length, 4, 2, COLORS.teal);
+
+    const statTop = 284;
+    const statGap = 6;
+    const statWidth = (this.width - 44) / 3;
+    ATTRIBUTES.forEach((key, index) => {
+      const x = 16 + (index % 3) * (statWidth + statGap);
+      const top = statTop + Math.floor(index / 3) * 49;
+      const value = state.stats[key];
+      this.roundedRect(x, top, statWidth, 43, 8, COLORS.paper, COLORS.line);
+      this.text(ATTRIBUTE_LABELS[key], x + 10, top + 18, 10, COLORS.muted);
+      const delta = yearChanges[key];
+      if (delta) this.text(`${delta > 0 ? "↑" : "↓"}${Math.abs(delta)}`, x + 39, top + 18, 9, delta > 0 ? COLORS.tealDark : COLORS.red);
+      this.text(String(value), x + statWidth - 10, top + 29, 17, value < 25 ? COLORS.red : COLORS.tealDark, "right", "700");
+      this.buttons.push({ label: `查看${ATTRIBUTE_LABELS[key]}变化`, x, y: top, width: statWidth, height: 43, onPress: () => {
+        this.panel = { id: "attribute", key, returnTo: "desk" }; this.render();
+      } });
+    });
+
+    this.button(workLabel, 16, 384, this.width - 32, 52, openStory);
+    const half = (this.width - 38) / 2;
+    this.button(`02  人生安排${life.lastActionYear === state.careerYear ? " · 已完成" : " · 可选"}`, 16, 446, half, 44, openLife, { small: true, secondary: !["event", "planning"].includes(state.phase) });
+    const promotionPlan = state.promotionPlan && state.promotionPlan.year === state.careerYear ? state.promotionPlan : null;
+    this.button(`晋升风声${promotionPlan ? " · 已选" : " · 可选"}`, 22 + half, 446, half, 44, openPromotion, { small: true, secondary: true });
+    this.text(firstStory ? "22岁，到青禾镇报到。第一件事在等你。" : "继续故事 → 自动年终评定 → 下一年", this.width / 2, 512, 11, COLORS.muted, "center");
+
+    const financeTop = 528;
+    this.roundedRect(16, financeTop, this.width - 32, 142, 12, COLORS.paper, COLORS.line);
+    this.text("家庭资产负债表 · 万元游戏资金", 30, financeTop + 25, 12, COLORS.gold, "left", "600");
+
+重生之我是公务员的一生（游戏软件） V1.0    第 44 页
+    this.text(`本年收入 ${review.annualIncome.toFixed(2)}  /  本年支出 ${review.livingCost.toFixed(2)}`, 30, financeTop + 50, 12, COLORS.ink);
+    this.text(`本年预计结余 ${projectedNet >= 0 ? "+" : ""}${projectedNet.toFixed(2)}`, 30, financeTop + 72, 12, projectedNet >= 0 ? COLORS.tealDark : COLORS.red);
+    this.text(`可支配现金 ${balance.cash.toFixed(2)}  ·  预计年终 ${Math.max(0, balance.cash + projectedNet).toFixed(2)}`, 30, financeTop + 94, 11, COLORS.muted);
+    this.text(`家庭净资产 ${balance.netAssets.toFixed(2)}  ·  负债 ${balance.debt.toFixed(2)}`, 30, financeTop + 115, 11, COLORS.ink);
+    this.text(`公积金 ${accounts.housingFund.toFixed(2)} · 年金 ${accounts.annuity.toFixed(2)} · 房车 ${balance.fixedAssets.toFixed(2)}`, 30, financeTop + 134, 10, COLORS.muted);
+
+    this.text("更多档案", 18, 704, 14, COLORS.ink, "left", "600");
+    const shortcuts = [
+      ["03  财务账户", () => { this.panel = { id: "accounts", focus: "housingFund", returnTo: "desk" }; this.render(); }],
+      ["04  房车安排", () => { this.panel = { id: "lifeActions", returnTo: "desk" }; this.render(); }],
+      ["05  健康管理", () => { this.panel = { id: "lifeActions", focus: "rest", returnTo: "desk" }; this.render(); }],
+      ["06  任职履历", () => { this.panel = { id: "career", returnTo: "desk" }; this.render(); }],
+      ["07  生活详情", () => { this.panel = { id: "profile", returnTo: "desk" }; this.render(); }],
+      ["08  故事履历", () => { this.panel = { id: "history", page: 0 }; this.render(); }]
+    ];
+    shortcuts.forEach(([label, action], index) => {
+      const x = 16 + (index % 2) * (half + 6);
+      const top = 718 + Math.floor(index / 2) * 54;
+      this.button(label, x, top, half, 44, action, { small: true, secondary: true });
+    });
+    const footerY = 890;
+    this.text(`故事选择 → 自动年终结算 · 人生安排可选 · 最多 ${MAX_CAREER_YEARS} 年`, this.width / 2, footerY, 11, COLORS.muted, "center");
+    this.contentHeight = Math.max(this.contentHeight, footerY + 30);
+  }
+
+  renderAttributePanel() {
+    const state = this.state || this.savedGame;
+    if (!state) return;
+    const key = ATTRIBUTES.includes(this.panel.key) ? this.panel.key : "performance";
+    const yearDelta = currentYearChanges(state)[key];
+    this.text(`${ATTRIBUTE_LABELS[key]}为什么是 ${state.stats[key]}？`, 24, 112, 23, COLORS.ink, "left", "600");
+    this.text(`本年净变化 ${yearDelta > 0 ? "+" : ""}${yearDelta}`, 24, 145, 14, yearDelta >= 0 ? COLORS.tealDark : COLORS.red);
+    let y = 190;
+    const sources = (state.history || []).filter((entry) => entry.changes && entry.changes[key])
+      .map((entry) => ({ year: entry.year, title: entry.eventTitle, detail: entry.choiceText, value: entry.changes[key] }));
+    getLifeState(state).actions.filter((action) => action.effects && action.effects[key])
+      .forEach((action) => sources.push({ year: action.year, title: `人生安排：${action.title}`, detail: action.outcome, value: action.effects[key] }));
+    sources.sort((a, b) => b.year - a.year);
+    if (!sources.length) {
+      y += this.wrapText("这一项还没有事件变动。当前数值来自基础属性和重生前经历。", 26, y, this.width - 52, 25, 15, COLORS.muted) * 25 + 24;
+    }
+    sources.slice(0, 12).forEach((source) => {
+      this.text(`第 ${source.year} 年 · ${source.value > 0 ? "+" : ""}${source.value}`, 26, y, 13, source.value > 0 ? COLORS.tealDark : COLORS.red, "left", "600");
+      y += 27;
+      y += this.wrapText(source.title, 26, y, this.width - 52, 24, 16, COLORS.ink) * 24 + 6;
+      y += this.wrapText(source.detail, 26, y, this.width - 52, 21, 12, COLORS.muted) * 21 + 24;
+    });
+    this.text("只显示最近 12 条变化；完整因果保存在故事履历。", 26, y, 11, COLORS.muted);
+    this.button("回到年度档案", 24, y + 30, this.width - 48, 48, () => { this.panel = { id: "desk" }; this.render(); });
+  }
+
+重生之我是公务员的一生（游戏软件） V1.0    第 45 页
+
+  renderAccountsPanel() {
+    const state = this.state || this.savedGame;
+    if (!state) return;
+    const accounts = getAccounts(state);
+    const focus = this.panel.focus || "housingFund";
+    const housing = focus === "housingFund";
+    const name = housing ? "公积金" : "职业年金";
+    const review = state.review || calculateReview(state);
+    const settled = accounts.entries.some((entry) => entry.type === "annual" && entry.year === state.careerYear);
+    const projection = state.phase === "ending" ? (settled ? "本年度已结算" : "本局已结束，本年度未结算") : review.accountCredit ? `本年预计入账 +${review.accountCredit[focus].toFixed(2)} 万` : "沿用旧版考核，本年度不补记账户";
+    [["housingFund", "公积金"], ["annuity", "职业年金"]].forEach(([id, label], index) => this.button(label, 18 + index * (this.width / 2 - 14), 72, this.width / 2 - 22, 38, () => {
+      this.panel = { id: "accounts", focus: id, returnTo: "desk" }; this.scrollY = 0; this.render();
+    }, { small: true, secondary: focus !== id }));
+    this.text(`${name}账户`, 24, 150, 23, COLORS.ink, "left", "600");
+    this.text(`${accounts[focus].toFixed(2)} 万`, 24, 201, 34, COLORS.gold, "left", "600");
+    let y = 237;
+    const paragraphs = [
+      "已到账余额 · 万元游戏资金",
+      projection,
+      `游戏年度入账 = 年薪的 ${ACCOUNT_RATES[focus] * 100}%。作为额外福利，年末到账，不从现金工资另扣；不是现实缴存规则。`,
+      housing ? "已到账公积金仅能在游戏中购置自住住房时抵扣，优先使用，差额付现金。不支持自由提现、贷款、购车或充值。" : "这笔长期积累与日常现金分开。当前版本只累计与展示，不设退休领取、提前提取或收益；结局仍保留余额，不自动变成现金。",
+      state.accounts ? `第 ${accounts.startedYear} 年起记账；旧版未记录的年份不补记。` : "旧存档尚未开立账户，从下次新版年度结算起记账，不补记过去的年份。"
+    ];
+    paragraphs.forEach((line) => { y += this.wrapText(line, 24, y, this.width - 48, 23, 14, COLORS.muted) * 23 + 15; });
+    if (housing) {
+      const funding = homeFunding(state);
+      y += this.wrapText(`自住房总价 50.00 万：当前公积金可抵 ${funding.housingFundUsed.toFixed(2)} 万，现金需 ${funding.cashCost.toFixed(2)} 万。${getLifeState(state).housing === "owned" ? "你已持有自住房，不能重复购置。" : "购置仍需满足年度安排条件。"}`, 24, y, this.width - 48, 23, 14, COLORS.ink) * 23 + 15;
+      this.button("查看住房购置条件", 24, y, this.width - 48, 46, () => { this.panel = { id: "lifeActions", focus: "home", returnTo: "desk" }; this.render(); }, { secondary: true });
+      y += 72;
+    }
+    const entries = accounts.entries.filter((entry) => housing || entry.type === "annual").slice().reverse();
+    const page = this.panel.page || 0;
+    const pageCount = Math.max(1, Math.ceil(entries.length / 8));
+    this.text(`账户流水 · ${page + 1}/${pageCount}`, 24, y, 18, COLORS.ink, "left", "600"); y += 31;
+    if (!entries.length) { y += this.wrapText("尚无入账记录。年度结算前，预计入账不能提前花。", 24, y, this.width - 48, 23, 14, COLORS.muted) * 23 + 18; }
+    entries.slice(page * 8, page * 8 + 8).forEach((entry) => {
+      const line = entry.type === "annual" ? `第 ${entry.year} 年 · ${ROLES[entry.roleIndex].name}任内入账 +${entry[focus].toFixed(2)} 万` : `第 ${entry.year} 年 · 自住房抵扣 −${entry.amount.toFixed(2)} 万`;
+      y += this.wrapText(line, 24, y, this.width - 48, 24, 14, entry.type === "annual" ? COLORS.tealDark : COLORS.gold) * 24 + 14;
+    });
+    if (page > 0) { this.button("上一页流水", 24, y, this.width - 48, 44, () => { this.panel.page = page - 1; this.scrollY = 0; this.render(); }, { secondary: true }); y += 56; }
+    if (page + 1 < pageCount) { this.button("下一页流水", 24, y, this.width - 48, 44, () => { this.panel.page = page + 1; this.scrollY = 0; this.render(); }, { secondary: true }); y += 56; }
+    this.button("回到年度档案", 24, y, this.width - 48, 48, () => { this.panel = { id: "desk" }; this.render(); });
+  }
+
+  renderPromotionPanel() {
+    const state = this.state || this.savedGame;
+    if (!state) return;
+    const role = ROLES[state.roleIndex];
+    const nextRole = ROLES[state.roleIndex + 1];
+
+重生之我是公务员的一生（游戏软件） V1.0    第 46 页
+    const review = state.review || calculateReview(state);
+    const opportunity = review.competition;
+    const plan = state.promotionPlan && state.promotionPlan.year === state.careerYear ? state.promotionPlan : null;
+    const hardConditions = nextRole && state.yearsInRole + 1 >= role.minYears &&
+      state.stats.performance >= role.minPerformance && state.stats.integrity >= role.minIntegrity && state.stats.health > 10;
+    const requiredScore = opportunity && opportunity.available
+      ? Math.max(role.threshold, opportunity.candidate.score + 1) : role.threshold;
+    const chance = !hardConditions || !opportunity || !opportunity.available || (plan && plan.detected) ? 0
+      : Math.max(0, Math.min(100, Math.round(((6.5 - (requiredScore - review.baseScore - (review.relationshipBonus || 0))) / 12) * 100)));
+    let y = 108;
+    this.text("晋升风声", 22, y, 22, COLORS.ink, "left", "600");
+    y += 34;
+    y += this.wrapText(nextRole
+      ? `${role.name} → ${nextRole.name}。空缺 ${opportunity && opportunity.available ? 1 : 0} 个，当前晋升机会约 ${chance}%。`
+      : "你已到达本局最高岗位，不再安排晋升运作。", 24, y, this.width - 48, 24, 14, COLORS.gold) * 24 + 18;
+    if (plan && PROMOTION_MOVES[plan.choice]) {
+      const move = PROMOTION_MOVES[plan.choice];
+      const cardTop = y;
+      const outcomeHeight = this.measureWrappedLines(plan.outcome, this.width - 68, 14).length * 23;
+      const changes = Object.entries(plan.changes).map(([key, value]) => `${ATTRIBUTE_LABELS[key]}${value > 0 ? "+" : ""}${value}`).join(" · ");
+      const changesHeight = changes ? this.measureWrappedLines(changes, this.width - 68, 12).length * 20 + 4 : 0;
+      const cardHeight = 59 + outcomeHeight + 12 + changesHeight + 42;
+      this.roundedRect(18, cardTop, this.width - 36, cardHeight, 14, COLORS.paper, COLORS.line);
+      this.text(`今年选择：${move.short}`, 34, cardTop + 31, 18, COLORS.tealDark, "left", "600");
+      y = cardTop + 59;
+      y += this.wrapText(plan.outcome, 34, y, this.width - 68, 23, 14, COLORS.ink) * 23 + 12;
+      if (changes) y += this.wrapText(changes, 34, y, this.width - 68, 20, 12, COLORS.muted) * 20 + 4;
+      this.text(plan.detected ? "风险兑现：已引发核查，本年不予提拔" : `年终评价影响 +${plan.bonus}（不保证晋升）`, 34, y, 13, plan.detected ? COLORS.red : COLORS.gold);
+      y += 42;
+    } else if (nextRole) {
+      y += this.wrapText("办公室传来风声：位置可能要动。你可以什么都不做，也可以选一种方式让自己被看见——越走捷径，代价和反噬越大。", 24, y, this.width - 48, 24, 14, COLORS.muted) * 24 + 17;
+      Object.values(PROMOTION_MOVES).forEach((move) => {
+        const reason = promotionActionReason(state, move.id);
+        const suffix = move.id === "report" ? "稳妥" : move.id === "dinner" ? "花 3000 元 · 有风险" : "花 8000 元 · 高风险";
+        this.button(`${move.name}｜${suffix}`, 20, y, this.width - 40, 50, () => {
+          try {
+            this.state = setPromotionChoice(this.state || this.savedGame, move.id);
+            this.panel = { id: "promotion", returnTo: "desk" };
+            this.saveAndRender();
+          } catch (error) { this.notice = error.message; this.render(); }
+        }, { small: true, secondary: Boolean(reason) || move.id !== "report" });
+        y += 62;
+        if (reason) { y += this.wrapText(reason, 24, y, this.width - 48, 20, 12, COLORS.red) * 20 + 8; }
+      });
+      y += this.wrapText("请客送礼是虚构风险选择，不是现实晋升规则；可能短期加分，也可能留任、降任或被查。", 24, y, this.width - 48, 21, 12, COLORS.muted) * 21 + 14;
+    }
+    this.button("回到年度档案", 24, y, this.width - 48, 48, () => { this.panel = { id: "desk" }; this.render(); });
+  }
+
+  renderLifePanel() {
+
+重生之我是公务员的一生（游戏软件） V1.0    第 47 页
+    const state = this.state || this.savedGame;
+    if (!state) { this.text("先开启一份履历", 28, 130, 20, COLORS.ink); return; }
+    const life = getLifeState(state);
+    const tabs = [["profile", "人生总览"], ["lifeActions", "年度安排"], ["career", "任职履历"]];
+    const tabWidth = (this.width - 48) / 3;
+    tabs.forEach(([id, label], index) => this.button(label, 16 + index * (tabWidth + 8), 72, tabWidth, 38, () => {
+      this.panel = { id }; this.render();
+    }, { small: true, secondary: this.panel.id !== id }));
+
+    if (this.panel.id === "lifeResult") {
+      const action = life.actions[life.actions.length - 1];
+      this.text(action.title, 24, 154, 23, COLORS.tealDark, "left", "600");
+      let y = 200;
+      y += this.wrapText(action.outcome, 28, y, this.width - 56, 27, 16, COLORS.ink) * 27 + 25;
+      if (action.housingFundUsed > 0) y += this.wrapText(`本次支付：公积金 ${action.housingFundUsed.toFixed(2)} 万 + 现金 ${action.cashCost.toFixed(2)} 万。抵扣已写入账户流水。`, 28, y, this.width - 56, 24, 14, COLORS.gold) * 24 + 18;
+      this.text(`已支出 ${action.cost} 万 · 本年度安排已使用`, 28, y, 13, COLORS.muted);
+      const settledYear = state.phase === "review";
+      this.button(settledYear ? "查看本年自动结算结果" : "完成安排，继续剧情", 28, y + 30, this.width - 56, 52, () => {
+        this.screen = "play";
+        this.panel = null;
+        this.saveAndRender();
+      });
+      this.button("先看看这一生的变化", 28, y + 96, this.width - 56, 46, () => { this.panel = { id: "profile" }; this.render(); }, { secondary: true });
+      return;
+    }
+
+    if (this.panel.id === "lifeActions") {
+      this.text("今年，为自己安排一次", 24, 151, 22, COLORS.ink, "left", "600");
+      let y = 186;
+      y += this.wrapText("年度工作期间可以主动安排一次，也可以完全跳过；最后一项工作完成后系统直接年终结算。金额都是游戏资金，不充值、不代表现实价格。", 28, y, this.width - 56, 23, 14, COLORS.muted) * 23 + 24;
+      ACTIONS.filter((action) => !this.panel.focus || action.id === this.panel.focus).forEach((action) => {
+        const reason = actionReason(state, action.id);
+        const funding = action.id === "home" ? homeFunding(state, action.cost) : null;
+        const payment = funding ? `总价 ${action.cost.toFixed(2)} 万：公积金抵扣 ${funding.housingFundUsed.toFixed(2)} 万，现金支付 ${funding.cashCost.toFixed(2)} 万。` : `支出 ${action.cost} 万可用游戏资金。`;
+        this.text(`${action.name} · ${action.cost} 万`, 28, y, 18, COLORS.ink, "left", "600");
+        y += 28;
+        y += this.wrapText(action.description, 28, y, this.width - 56, 23, 14, COLORS.muted) * 23 + 10;
+        if (funding) y += this.wrapText(payment, 28, y, this.width - 56, 23, 14, COLORS.gold) * 23 + 10;
+        if (reason) {
+          y += this.wrapText(reason, 28, y, this.width - 56, 22, 13, COLORS.red) * 22 + 25;
+        } else {
+          this.button(`安排：${action.name}`, 28, y, this.width - 56, 46, () => this.confirm(
+            `${action.name}：${payment}占用本年度唯一一次人生安排。${action.description}确认安排？`,
+            () => {
+              try {
+                this.state = takeLifeAction(this.state || this.savedGame, action.id);
+                // A legacy/internal state can still arrive here after all work
+                // is complete. Settle it now instead of reviving a manual
+                // year-end step.
+                if (this.state.phase === "planning") this.state = finalizeAnnualPlanning(this.state);
+
+重生之我是公务员的一生（游戏软件） V1.0    第 48 页
+                this.screen = "play";
+                this.panel = { id: "lifeResult" };
+                this.saveAndRender();
+              } catch (error) { this.notice = error.message; this.panel = { id: "lifeActions" }; this.render(); }
+            }
+          ));
+          y += 73;
+        }
+      });
+      this.button("回到年度档案", 28, y, this.width - 56, 48, () => {
+        this.panel = { id: "desk" }; this.render();
+      });
+      return;
+    }
+
+    if (this.panel.id === "career") {
+      this.text("职务变了，来路还在", 24, 151, 22, COLORS.ink, "left", "600");
+      let y = 192;
+      const records = [{ year: 1, title: "录用起点", body: `${ROLES[0].post} · 一级科员` }];
+      (state.annualReports || []).forEach((report) => {
+        if (report.demoted && ROLES[report.roleIndex - 1]) records.push({ year: report.year, title: `年末组织调整 · 降任至${ROLES[report.roleIndex - 1].name}`, body: `${ROLES[report.roleIndex].post} → ${ROLES[report.roleIndex - 1].post}` });
+        else if (report.promoted && ROLES[report.roleIndex + 1]) records.push({ year: report.year, title: `年末${ROLES[report.roleIndex + 1].entryMode} · ${ROLES[report.roleIndex + 1].name}`, body: `${ROLES[report.roleIndex].post} → ${ROLES[report.roleIndex + 1].post}` });
+        else if (report.rankPromoted && CIVIL_RANKS[report.rankIndex + 1]) records.push({ year: report.year, title: `年末职级晋升 · ${CIVIL_RANKS[report.rankIndex + 1]}`, body: `${ROLES[report.roleIndex].post}，领导职务不变` });
+      });
+      records.reverse().forEach((record) => {
+        this.text(`第 ${record.year} 年 · ${START_AGE + record.year - 1} 岁`, 28, y, 13, COLORS.gold);
+        y += 28;
+        y += this.wrapText(record.title, 28, y, this.width - 56, 26, 18, COLORS.tealDark) * 26 + 8;
+        y += this.wrapText(record.body, 28, y, this.width - 56, 24, 14, COLORS.ink) * 24 + 30;
+      });
+      this.button("完整故事与年度记录", 28, y, this.width - 56, 48, () => { this.panel = { id: "history", page: 0 }; this.render(); });
+      return;
+    }
+
+    const role = ROLES[state.roleIndex];
+    const review = state.review || calculateReview(state);
+    this.text(`${START_AGE + state.careerYear - 1} 岁 · 第 ${state.careerYear} 年`, 24, 150, 21, COLORS.ink, "left", "600");
+    this.roundedRect(20, 171, this.width - 40, 144, 15, COLORS.header, COLORS.line);
+    this.text(role.level || "尚未担任领导职务", 36, 200, 14, COLORS.mint);
+    this.wrapText(role.post, 36, 232, this.width - 72, 26, 20, COLORS.white);
+    this.text(`现职已满 ${state.yearsInRole} 年 · 职级${state.roleIndex < 7 ? "：" + CIVIL_RANKS[state.rankIndex] : "不适用"}`, 36, 291, 12, COLORS.mint);
+    let y = 350;
+    const sections = [
+      ["账本 · 万元游戏资金", [
+        `可用结余 ${Math.max(0, state.assets).toFixed(2)} · 预算缺口 ${Math.max(0, -state.assets).toFixed(2)}`,
+        `公积金 ${getAccounts(state).housingFund.toFixed(2)} · 职业年金 ${getAccounts(state).annuity.toFixed(2)}（不计入可用结余）`,
+        `现职模拟年收入 ${review.annualIncome} · 预计支出 ${review.livingCost}`,
+        `其中养车 ${life.vehicle ? 2 : 0} · 子女预算 ${annualChildCost(state)} · 自住房节省 ${life.housing === "owned" ? 1 : 0}`,
+        "预算缺口不是贷款；本版无借贷、利息与资产交易。"
+      ]],
+
+重生之我是公务员的一生（游戏软件） V1.0    第 49 页
+      ["生活有了具体的模样", [
+        `住房：${HOUSING[life.housing]} · ${life.vehicle ? "有代步车" : "无车"}`,
+        `通勤：${life.housing === "near" ? "近单位步行" : life.vehicle ? "可自行驾车" : "沿用原通勤路线"}`,
+        `关系：${RELATIONSHIPS[life.relationship]}${life.longDistance ? " · 两地生活" : ""}`,
+        life.child ? `孩子：${life.child.name} · ${childAge(state)} 岁。${childAge(state) < 18 ? "每年养育预算 2 万，已计入支出。" : "已停止固定养育扣款，不代表现实抚养责任终止。"}` : "子女：暂无。可自愿选择迎接孩子，也可以不安排。",
+        life.relocationPending ? "调动意向：已了解渠道，尚未实现调动" : "调动意向：暂无记录",
+        `年度安排：${life.lastActionYear === state.careerYear ? "已使用" : "未使用"}`
+      ]]
+    ];
+    sections.forEach(([title, lines]) => {
+      this.text(title, 28, y, 18, COLORS.tealDark, "left", "600"); y += 30;
+      lines.forEach((line) => { y += this.wrapText(line, 28, y, this.width - 56, 24, 14, COLORS.ink) * 24 + 8; });
+      y += 20;
+    });
+    const latest = life.actions[life.actions.length - 1];
+    if (latest) {
+      this.text(`最近安排 · 第 ${latest.year} 年`, 28, y, 16, COLORS.gold); y += 28;
+      y += this.wrapText(latest.outcome, 28, y, this.width - 56, 24, 14, COLORS.ink) * 24 + 24;
+    }
+    this.button("去安排今年的人生", 28, y, this.width - 56, 50, () => { this.panel = { id: "lifeActions" }; this.render(); });
+    this.button("回到当前故事", 28, y + 64, this.width - 56, 48, () => { this.panel = null; this.render(); }, { secondary: true });
+  }
+
+  renderRules() {
+    const state = this.state || this.savedGame;
+    const index = state ? state.roleIndex : 0;
+    const role = ROLES[index];
+    this.text("先了解下一步", 24, 110, 24, COLORS.ink, "left", "600");
+    const paragraphs = [
+      "你重回公务员录用那年，从乡镇科员开始。人物、地区与剧情虚构；职务层次和职级名称参考公开制度。年限、工资、考核分与晋升过程是游戏化设定。",
+      "年度流程固定为：处理本年工作；期间可主动做一次人生安排，也可以跳过。最后一项工作结束后，系统立即生成年度报告并自动评定提拔、交流、留任、职级晋升或降任，不再要求点击年终总结。",
+      index < ROLES.length - 1
+        ? `${role.name} → ${ROLES[index + 1].name}：当前岗位至少 ${role.minYears} 年、政绩至少 ${role.minPerformance}、廉洁至少 ${role.minIntegrity}、总分至少 ${role.threshold}，且健康大于 0。这里的年限与分数仅是游戏条件。`
+        : "你已到达最高岗位，之后不再调任，继续处理事务直至本局结束。",
+      "评分 = 政绩 35% + 能力 20% + 民望 15% + 廉洁 20% + 岗位匹配 10%。岗位匹配取能力和民望的平均值。年末另有 −6 至 +6 的随机分，并公开列出。",
+      "晋升风声页每年可选一次：正常汇报最稳妥；请客或送礼可能带来短期评价影响，但会损害廉洁并有核查风险，绝不保证晋升。年终仍综合考虑个人条件、公开波动、空缺和竞争结果。",
+      "路线会在党政办公室、民政、乡镇政府、市场监管、政法、公安、发展改革、生态环境、交通运输和综合领导岗位之间调任。跨部门资格、年限和任职程序被游戏化简化，不代表现实中的直接任免路径。",
+      "职务与职级分开：主任科员、调研员、巡视员不自动拥有相应领导职权。游戏中未获职务提拔时，职级年限满 2 年、廉洁和总分均至少 60，可继续晋升职级；不代表现实规定。",
+      "未晋升不会清空积累。综合评价低于 42 或廉洁低于 25，可能降任；健康降到 10 以下，或廉洁低于 15，本局会提前结束。也可以在选项里主动离任。",
+      `这条履历从青禾镇科员起步，横跨十类部门与综合岗位，最高到国家层面的虚构综合协调副职。每局最多 ${MAX_CAREER_YEARS} 年；这不是现实任免路径。`
+    ];
+    let y = 160;
+    paragraphs.forEach((paragraph) => {
+      y += this.wrapText(paragraph, 28, y, this.width - 56, 26, 15, COLORS.ink) * 26 + 24;
+    });
+    this.button("了解了，返回", 28, y, this.width - 56, 52, () => { this.panel = { id: this.panel.returnTo || "menu", returnTo: this.panel.returnTo === "promotion" ? "desk" : undefined }; this.render(); });
+  }
+
+  renderHistory() {
+    const state = this.state || this.savedGame;
+
+重生之我是公务员的一生（游戏软件） V1.0    第 50 页
+    this.text("一页页走过的路", 24, 110, 24, COLORS.ink, "left", "600");
+    const entries = [...state.history].reverse().map((item) => ({ ...item, type: "event" }));
+    getLifeState(state).actions.forEach((item) => entries.push({ ...item, type: "arrangement", eventTitle: item.title, choiceText: `人生安排 · 支出 ${item.cost} 万游戏资金`, changes: {} }));
+    (state.annualReports || []).forEach((item) => entries.push({ ...item, type: "annual" }));
+    entries.sort((a, b) => b.year - a.year || (a.type === b.type ? 0 : a.type === "annual" ? -1 : 1));
+    const pageSize = 6;
+    const pages = Math.max(1, Math.ceil(entries.length / pageSize));
+    this.text(`第 ${this.panel.page + 1} / ${pages} 页 · 最新经历在前`, 24, 140, 13, COLORS.muted);
+    let y = 180;
+    if (!entries.length) { this.text("还没有作出选择，履历正待书写。", 24, y, 14, COLORS.muted); y += 50; }
+    entries.slice(this.panel.page * pageSize, (this.panel.page + 1) * pageSize).forEach((entry) => {
+      this.text(`第 ${entry.year} 年 · ${ROLES[entry.roleIndex].name}`, 28, y, 13, COLORS.teal);
+      y += 27;
+      const title = entry.type === "annual" ? `年度 ${entry.score} 分 · ${entry.demoted ? "降任" : entry.promoted ? "提拔" : entry.rankPromoted ? "职级晋升" : "留任"}` : entry.eventTitle;
+      y += this.wrapText(title, 28, y, this.width - 56, 25, 18, COLORS.ink) * 25 + 5;
+      const moveLabel = entry.promotionChoice && PROMOTION_MOVES[entry.promotionChoice] ? `；晋升选择：${PROMOTION_MOVES[entry.promotionChoice].short}${entry.promotionDetected ? "（引发核查）" : ""}` : "";
+      const body = entry.type === "annual" ? `${TRANSFER_LABELS[entry.promotionMode || "legacy"]}${moveLabel}；结余 ${entry.netIncome}；${entry.reasons.join("；") || "各项自动调任条件已满足"}` : entry.choiceText;
+      y += this.wrapText(body, 28, y, this.width - 56, 23, 14, COLORS.muted) * 23 + 5;
+      if (entry.type === "annual" && entry.competition) {
+        const competitionText = entry.competition.available
+          ? `岗位竞争：空缺 1 个；同场人选 ${entry.competition.candidate.name}，竞争线 ${entry.competition.candidate.score} 分。`
+          : "岗位竞争：本年度目标岗位未形成空缺。";
+        y += this.wrapText(competitionText, 28, y, this.width - 56, 23, 14, COLORS.gold) * 23 + 8;
+      }
+      if (entry.accountCredit) y += this.wrapText(`另入账户：公积金 +${entry.accountCredit.housingFund.toFixed(2)}，职业年金 +${entry.accountCredit.annuity.toFixed(2)} 万。`, 28, y, this.width - 56, 23, 14, COLORS.gold) * 23 + 8;
+      if (entry.childCost) y += this.wrapText(`本年度支出已含子女预算 ${entry.childCost.toFixed(2)} 万。`, 28, y, this.width - 56, 23, 14, COLORS.muted) * 23 + 8;
+      if (entry.housingFundUsed > 0) y += this.wrapText(`其中公积金 ${entry.housingFundUsed.toFixed(2)}，现金 ${entry.cashCost.toFixed(2)} 万。`, 28, y, this.width - 56, 23, 14, COLORS.gold) * 23 + 8;
+      if (entry.type !== "annual") {
+        if (entry.outcome) y += this.wrapText(entry.outcome, 28, y, this.width - 56, 23, 14, COLORS.ink) * 23 + 10;
+        const delta = Object.entries(entry.changes).map(([key, value]) => `${ATTRIBUTE_LABELS[key]}${value > 0 ? "+" : ""}${value}`).join(" · ");
+        y += this.wrapText(delta, 28, y, this.width - 56, 22, 13, COLORS.teal) * 22;
+      }
+      y += 30;
+    });
+    if (this.panel.page > 0) this.button("上一页", 24, y, (this.width - 60) / 2, 48, () => { this.panel.page -= 1; this.scrollY = 0; this.render(); }, { secondary: true });
+    if (this.panel.page + 1 < pages) this.button("下一页", this.width / 2 + 6, y, (this.width - 60) / 2, 48, () => { this.panel.page += 1; this.scrollY = 0; this.render(); });
+    this.button("返回选项", 24, y + 62, this.width - 48, 48, () => { this.panel = { id: "menu" }; this.render(); }, { secondary: true });
+  }
+
+  drawCityLines() {
+    const ctx = this.context;
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    ctx.strokeStyle = COLORS.teal;
+    ctx.lineWidth = 1;
+    for (let x = -40; x < this.width + 80; x += 62) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + 110, this.height);
+      ctx.stroke();
+
+重生之我是公务员的一生（游戏软件） V1.0    第 51 页
+    }
+    for (let y = 34; y < this.height; y += 84) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(this.width, y + 38);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  drawHeader(showBack = false) {
+    this.context.fillStyle = COLORS.header;
+    this.context.fillRect(0, 0, this.width, 58);
+    this.text("重生之我是公务员的一生", 14, 34, 13, COLORS.white, "left", "600");
+    if (!this.panel) this.button("选项", this.width - 82, 7, 64, 44, () => { this.panel = { id: "menu" }; this.render(); }, { small: true });
+    else if (this.panel.id !== "confirm") this.button("返回", this.width - 82, 7, 64, 44, () => {
+      if (this.panel.returnTo) this.panel = { id: this.panel.returnTo };
+      else if (this.panel.id === "desk") { this.panel = null; this.screen = "home"; }
+      else if (["history", "rules"].includes(this.panel.id)) this.panel = { id: "menu" };
+      else this.panel = null;
+      this.render();
+    }, { small: true });
+    if ((!this.panel || this.panel.id === "desk") && (this.state || this.savedGame) && !showBack) this.button("人生", this.width - 153, 7, 64, 44, () => { this.panel = { id: "desk" }; this.render(); }, { small: true });
+    if (showBack) {
+      this.button("返回", this.width - 76, 68, 58, 34, () => {
+        this.screen = "home";
+        this.render();
+      }, { secondary: true, small: true });
+    }
+  }
+
+  renderHome() {
+    this.drawHeader(false);
+    const centerX = this.width / 2;
+    this.text("重生之我是", centerX, 132, 30, COLORS.ink, "center", "700");
+    this.text("公务员的一生", centerX, 168, 30, COLORS.ink, "center", "700");
+    this.text("重生一次，重走仕途", centerX, 196, 15, COLORS.muted, "center");
+    this.roundedRect(28, 220, this.width - 56, 128, 16, COLORS.paper, COLORS.line);
+    this.text("这一世，履历由你来写", centerX, 253, 20, COLORS.tealDark, "center", "600");
+    this.wrapText(
+      "醒来那天，你又拿到了录用通知。这次，从科员开始，是平稳退休，还是一步步走向更高的职位？",
+      52,
+      286,
+      this.width - 104,
+      23,
+      14,
+      COLORS.muted
+    );
+
+    // 《健康游戏忠告》must be legible before the game starts, so it sits
+
+重生之我是公务员的一生（游戏软件） V1.0    第 52 页
+    // directly above the entry buttons instead of below the fold.
+    const adviceTop = 358;
+    const adviceLines = this.measureWrappedLines(HEALTH_ADVICE, this.width - 84, 11).length;
+    const adviceHeight = 36 + adviceLines * 17;
+    this.roundedRect(28, adviceTop, this.width - 56, adviceHeight, 12, COLORS.paper, COLORS.line);
+    this.text("健康游戏忠告", 42, adviceTop + 20, 12, COLORS.gold, "left", "600");
+    this.wrapText(HEALTH_ADVICE, 42, adviceTop + 38, this.width - 84, 17, 11, COLORS.muted);
+
+    let firstY = adviceTop + adviceHeight + 20;
+    if (this.savedGame) {
+      const role = ROLES[this.savedGame.roleIndex];
+      this.text(role.name, centerX, firstY + 11, 13, COLORS.gold, "center", "600");
+      this.button(`继续第 ${this.savedGame.careerYear} 年`, 34, firstY + 24, this.width - 68, 54, () => this.continueGame());
+      this.button("开始新的履历", 34, firstY + 92, this.width - 68, 50, () => {
+        this.screen = "background";
+        this.render();
+      }, { secondary: true });
+      firstY += 142;
+    } else {
+      this.button("重回录用那一年", 34, firstY + 24, this.width - 68, 56, () => {
+        this.screen = "background";
+        this.render();
+      });
+      firstY += 88;
+    }
+
+    const collectionY = firstY + 14;
+    this.button(`结局收藏 · ${new Set(this.archive.map((item) => item.endingId)).size} / ${ENDINGS.length}`, 34, collectionY, this.width - 68, 48, () => {
+      this.panel = { id: "collection" };
+      this.render();
+    }, { secondary: true });
+
+    const footerTop = collectionY + 62;
+    this.text("内部原型 · 本地存档 · 无广告与充值", centerX, footerTop, 11, COLORS.muted, "center");
+    this.text("人物剧情虚构 · 多部门履历 · 游戏化调任", centerX, footerTop + 19, 11, COLORS.muted, "center");
+    // The advice block can push the footer past a short viewport; let it scroll.
+    this.contentHeight = Math.max(this.height, footerTop + 44);
+  }
+
+  renderBackgrounds() {
+    this.drawHeader(true);
+    this.text("选择你的前世经历", 24, 126, 25, COLORS.ink, "left", "700");
+    this.wrapText("这决定你的起点，不是结局。这次重新走一次仕途。", 24, 153, this.width - 48, 20, 13, COLORS.muted);
+    let y = 186;
+    BACKGROUNDS.forEach((background) => {
+      this.roundedRect(22, y, this.width - 44, 118, 14, COLORS.paper, COLORS.line);
+      this.text(background.name, 40, y + 31, 20, COLORS.tealDark, "left", "600");
+      this.wrapText(background.description, 40, y + 57, this.width - 160, 20, 13, COLORS.muted);
+      const effectText = Object.entries(background.effects)
+        .map(([key, value]) => `${ATTRIBUTE_LABELS[key]}${value > 0 ? "+" : ""}${value}`)
+
+重生之我是公务员的一生（游戏软件） V1.0    第 53 页
+        .join("  ");
+      this.text(effectText, 40, y + 96, 12, COLORS.ink);
+      this.button("选择", this.width - 104, y + 38, 66, 42, () => this.startGame(background.id), { small: true });
+      y += 132;
+    });
+  }
+
+  renderPlay() {
+    this.drawHeader(false);
+    if (!this.state) return;
+    if (this.state.phase === "event" && this.state.appointment) { this.renderAppointment(); return; }
+    if (this.state.phase === "event" && (this.state.startOfYearResults || []).length) {
+      this.renderYearNews();
+      return;
+    }
+    if (this.state.phase === "event") this.renderEvent();
+    else if (this.state.phase === "result") this.renderResult();
+    // The last result is settled immediately by its action. This branch only
+    // protects an in-memory state created by an older build or a test harness.
+    else if (this.state.phase === "planning") this.renderDashboard();
+    else if (this.state.phase === "review") this.renderReview();
+    else if (this.state.phase === "ending") this.renderEnding();
+  }
+
+  renderAppointment() {
+    this.buttons = [];
+    const appointment = this.state.appointment;
+    const role = ROLES[appointment.roleIndex];
+    const leadership = appointment.type === "leadership";
+    const demotion = appointment.type === "demotion";
+    const description = leadership
+      ? `上一任：${ROLES[Math.max(0, appointment.roleIndex - 1)].post}。本次通过${role.entryMode}到任：${role.post}（${role.level || "非领导岗位"}）。职责变化：${role.responsibility}。`
+      : demotion
+        ? `上一任：${ROLES[Math.min(ROLES.length - 1, appointment.roleIndex + 1)].post}。因年度组织评价触发降任，本次调整到：${role.post}。职级暂按游戏规则保留，新的岗位职责重新起算。`
+        : `你晋升为${CIVIL_RANKS[appointment.rankIndex]}，当前职务不变。职级待遇进步，不代表新增领导职权。`;
+    const title = leadership || demotion ? role.name : CIVIL_RANKS[appointment.rankIndex];
+    const titleY = 181;
+    const titleLineHeight = 32;
+    const titleLines = this.measureWrappedLines(title, this.width - 72, 26).length;
+    const bodyY = titleY + titleLines * titleLineHeight + 13;
+    const lines = this.measureWrappedLines(description, this.width - 72, 15).length;
+    const buttonY = Math.max(362, bodyY + lines * 24 + 46);
+    this.context.save();
+    this.context.globalAlpha = 0.86;
+    this.context.fillStyle = "#05080d";
+    this.context.fillRect(0, 58, this.width, Math.max(this.contentHeight, buttonY + 90));
+    this.context.restore();
+    this.roundedRect(20, 99, this.width - 40, buttonY + 76 - 99, 14, "#253249", "#526079");
+    this.text(leadership ? `${role.entryMode}结果` : demotion ? "组织调整结果" : "职级晋升结果", 36, 136, 23, COLORS.white, "left", "600");
+    this.wrapText(title, 36, titleY, this.width - 72, titleLineHeight, 26, COLORS.tealDark);
+
+重生之我是公务员的一生（游戏软件） V1.0    第 54 页
+    this.wrapText(description, 36, bodyY, this.width - 72, 24, 15, COLORS.ink);
+    this.text("游戏任职记录 · 不是真实任免文件", this.width / 2, buttonY - 21, 11, COLORS.muted, "center");
+    this.button(demotion ? "接受调整，重新履职" : "赴任，开始新一年", 32, buttonY, this.width - 64, 54, () => {
+      this.state = { ...this.state, appointment: null };
+      this.panel = null;
+      this.screen = "play";
+      this.scrollY = 0;
+      this.saveAndRender();
+    });
+    this.contentHeight = Math.max(this.height, buttonY + 100);
+  }
+
+  renderYearNews() {
+    this.text("过去的选择有了回音", 24, 114, 23, COLORS.ink, "left", "600");
+    let y = 160;
+    this.state.startOfYearResults.forEach((item) => {
+      const count = this.wrapText(item.message, 28, y, this.width - 56, 25, 16, COLORS.ink);
+      y += count * 25 + 16;
+      const changes = Object.entries(item.changes).map(([key, value]) => `${ATTRIBUTE_LABELS[key]} ${value > 0 ? "+" : ""}${value}`).join(" · ");
+      y += this.wrapText(changes, 28, y, this.width - 56, 23, 14, COLORS.teal) * 23 + 28;
+    });
+    this.button("带着这些变化，进入新一年", 28, y, this.width - 56, 54, () => {
+      this.state = { ...this.state, startOfYearResults: [] };
+      this.scrollY = 0;
+      this.saveAndRender();
+    });
+  }
+
+  renderStatus() {
+    const role = ROLES[this.state.roleIndex];
+    this.text(`${START_AGE + this.state.careerYear - 1}岁 · 第${this.state.careerYear}年`, 18, 84, 12, COLORS.muted);
+    this.text(this.state.roleIndex === 0 && this.state.rankIndex > 1 ? "未任领导" : role.name, this.width / 2, 84, 16, COLORS.tealDark, "center", "600");
+    this.text(`现金 ${this.state.assets.toFixed(2)}`, this.width - 18, 84, 13, COLORS.muted, "right");
+    const cardX = 16;
+    const cardY = 98;
+    const gap = 5;
+    const cellWidth = (this.width - cardX * 2 - gap * 2) / 3;
+    ATTRIBUTES.forEach((key, index) => {
+      const col = index % 3;
+      const row = Math.floor(index / 3);
+      const x = cardX + col * (cellWidth + gap);
+      const y = cardY + row * 41;
+      this.roundedRect(x, y, cellWidth, 35, 8, COLORS.paper, COLORS.line);
+      this.text(ATTRIBUTE_LABELS[key], x + 9, y + 22, 11, COLORS.muted);
+      const value = this.state.stats[key];
+      const color = value < 25 ? COLORS.red : COLORS.tealDark;
+      this.text(String(value), x + cellWidth - 9, y + 23, 15, color, "right", "700");
+    });
+    this.text(`${role.post}`, 18, 189, 12, COLORS.tealDark);
+    this.text(this.state.roleIndex < 7 ? CIVIL_RANKS[this.state.rankIndex] : "职级：不适用", this.width - 18, 189, 11, COLORS.muted, "right");
+
+重生之我是公务员的一生（游戏软件） V1.0    第 55 页
+  }
+
+  renderEvent() {
+    this.renderStatus();
+    const event = findCurrentEvent(this.state, EVENTS);
+    if (!event) return;
+    const top = 206;
+    const body = compactNarrative(event.body, 82);
+    // Long story titles are authored in natural language. Drawing them on one
+    // line overflowed narrow (320px) screens, so titles now scale down and
+    // wrap, and the card grows to fit the measured title height.
+    const titleSize = event.title.length > 16 ? 19 : event.title.length > 12 ? 21 : 23;
+    const titleLineHeight = titleSize + 5;
+    const titleLines = this.measureWrappedLines(event.title, this.width - 68, titleSize).length;
+    const bodyLines = this.measureWrappedLines(body, this.width - 68, 15).length;
+    const bodyTop = top + 60 + titleLines * titleLineHeight + 6;
+    const cardHeight = Math.max(208, (bodyTop - top) + bodyLines * 25 + 14);
+    this.roundedRect(16, top, this.width - 32, cardHeight, 15, COLORS.paper, COLORS.line);
+    const categoryLabel = event.contentTag || { work: "工作事项", life: "生活片段", city: "城市事件", integrity: "廉洁考察", assessment: "旧版考察收尾" }[event.category];
+    this.text(categoryLabel, 34, top + 28, 12, COLORS.gold, "left", "600");
+    this.wrapText(event.title, 34, top + 60, this.width - 68, titleLineHeight, titleSize, COLORS.ink);
+    this.wrapText(body, 34, bodyTop, this.width - 68, 25, 15, COLORS.ink);
+
+    let y = top + cardHeight + 20;
+    const previous = event.afterEvent && this.state.history.slice().reverse().find((item) => item.eventId === event.afterEvent.id);
+    if (previous) {
+      y += this.wrapText(`往事回响 · 第 ${previous.year} 年「${previous.eventTitle}」`, 24, y, this.width - 48, 22, 13, COLORS.gold) * 22 + 4;
+      y += this.wrapText(`当时你选择：${previous.choiceText}`, 24, y, this.width - 48, 22, 13, COLORS.muted) * 22 + 16;
+    }
+    event.choices.forEach((choice, index) => {
+      const lines = this.measureWrappedLines(choice.text, this.width - 98, 15);
+      const height = Math.max(50, 29 + lines.length * 18);
+      this.button(`${index + 1}. ${choice.text}`, 24, y, this.width - 48, height, () => {
+        this.state = selectChoice(this.state, EVENTS, index);
+        this.saveAndRender();
+      }, { align: "left" });
+      y += height + 10;
+    });
+    const footerY = Math.max(this.height - 20, y + 20);
+    this.contentHeight = Math.max(this.contentHeight, footerY + 24);
+    this.text("选择后自动保存 · 岗位条件见右上角选项", this.width / 2, footerY, 10, COLORS.muted, "center");
+  }
+
+  renderResult() {
+    this.renderStatus();
+    const result = this.state.lastResult;
+    const textWidth = this.width - 84;
+    const titleLines = this.measureWrappedLines(result.eventTitle, textWidth, 22).length;
+    const choiceY = 280 + titleLines * 28;
+    const choiceLines = this.measureWrappedLines(`你的选择：${result.choiceText}`, textWidth, 15).length;
+
+重生之我是公务员的一生（游戏软件） V1.0    第 56 页
+    const outcome = compactNarrative(result.outcome, 82);
+    const outcomeY = choiceY + choiceLines * 24 + 12;
+    const outcomeLines = outcome ? this.measureWrappedLines(outcome, textWidth, 15).length : 0;
+    const changesY = outcomeY + outcomeLines * 25 + (outcomeLines ? 22 : 10);
+    const changes = Object.entries(result.changes).filter(([, value]) => value !== 0);
+    let extraY = changesY + Math.max(1, Math.ceil(changes.length / 2)) * 30;
+    const messages = result.delayedMessages || [];
+    const accountabilityHeight = result.accountabilityNote
+      ? this.measureWrappedLines(result.accountabilityNote, textWidth, 13).length * 22 + 8
+      : 0;
+    const notesHeight = messages.reduce((height, message) => height + this.measureWrappedLines(message, textWidth, 13).length * 22, 0);
+    const bottom = extraY + (result.assetChange ? 28 : 0) + accountabilityHeight + notesHeight + 20;
+    this.roundedRect(20, 204, this.width - 40, bottom - 204, 16, COLORS.paper, COLORS.line);
+    this.text("这一页写下了", this.width / 2, 242, 13, COLORS.gold, "center", "600");
+    this.wrapText(result.eventTitle, 42, 280, textWidth, 28, 22, COLORS.ink);
+    this.wrapText(`你的选择：${result.choiceText}`, 42, choiceY, textWidth, 24, 15, COLORS.muted);
+    if (outcome) this.wrapText(outcome, 42, outcomeY, textWidth, 25, 15, COLORS.ink);
+    if (!changes.length) this.text("各项状态暂时没有变化", this.width / 2, changesY, 14, COLORS.muted, "center");
+    changes.forEach(([key, value], index) => {
+      const x = 48 + (index % 2) * ((this.width - 96) / 2);
+      const rowY = changesY + Math.floor(index / 2) * 30;
+      const color = value > 0 ? COLORS.teal : COLORS.red;
+      this.text(`${ATTRIBUTE_LABELS[key]} ${value > 0 ? "+" : ""}${value}`, x, rowY, 15, color, "left", "600");
+    });
+    if (result.assetChange) {
+      this.text(`积蓄 ${result.assetChange > 0 ? "+" : ""}${result.assetChange}`, 48, extraY, 14, COLORS.muted);
+      extraY += 28;
+    }
+    if (result.accountabilityNote) {
+      extraY += this.wrapText(result.accountabilityNote, 42, extraY, textWidth, 22, 13, COLORS.gold) * 22 + 8;
+    }
+    messages.forEach((message) => { extraY += this.wrapText(message, 42, extraY, textWidth, 22, 13, COLORS.muted) * 22; });
+    this.button(this.state.queue.length ? "继续处理本年工作" : "完成工作，自动年终结算", 32, bottom + 20, this.width - 64, 54, () => {
+      this.state = advanceAfterResult(this.state, EVENTS);
+      if (this.state.phase === "planning") this.state = finalizeAnnualPlanning(this.state);
+      this.saveAndRender();
+    });
+    this.contentHeight = Math.max(this.contentHeight, bottom + 100);
+  }
+
+  renderReview() {
+    this.renderStatus();
+    const review = this.state.review;
+    const nextRole = ROLES[Math.min(this.state.roleIndex + 1, ROLES.length - 1)];
+    const decision = `${TRANSFER_LABELS[review.promotionMode || "legacy"]}。${review.reasons.join("；") || "年末条件均已满足，自动调任。"}`;
+    const reasonHeight = this.measureWrappedLines(decision, this.width - 88, 13).length * 21;
+    const reportHeight = Math.max(330, 264 + reasonHeight + 48);
+    this.roundedRect(18, 196, this.width - 36, reportHeight, 16, COLORS.paper, COLORS.line);
+    this.text("年度履职报告", this.width / 2, 234, 25, COLORS.ink, "center", "700");
+    this.text(String(review.finalScore), this.width / 2, 302, 52, review.promoted ? COLORS.teal : COLORS.gold, "center", "700");
+
+重生之我是公务员的一生（游戏软件） V1.0    第 57 页
+    this.text(`基础 ${review.baseScore} · 波动 ${review.randomShift >= 0 ? "+" : ""}${review.randomShift} · 人情 ${review.relationshipBonus > 0 ? "+" : ""}${review.relationshipBonus || 0}`, this.width / 2, 329, 13, COLORS.muted, "center");
+    this.text(`组织评价门槛 ${review.threshold}`, this.width / 2, 354, 13, COLORS.muted, "center");
+    if (review.demoted) {
+      this.text(`组织调整：降任至 ${ROLES[Math.max(0, this.state.roleIndex - 1)].name}`, this.width / 2, 394, 15, COLORS.red, "center", "600");
+    } else if (review.promoted) {
+      this.text(`${nextRole.entryMode}：${nextRole.name}`, this.width / 2, 394, 15, COLORS.tealDark, "center", "600");
+    } else {
+      this.text(review.rankPromoted ? `职级晋升：${CIVIL_RANKS[this.state.rankIndex + 1]}` : "本年度留任", this.width / 2, 394, 17, COLORS.ink, "center", "600");
+    }
+    this.wrapText(decision, 44, 424, this.width - 88, 21, 13, COLORS.muted, "center");
+    this.text(`模拟薪资 +${review.annualIncome}  ·  支出 -${review.livingCost}`, this.width / 2, 196 + reportHeight - 28, 13, COLORS.muted, "center");
+    let y = 196 + reportHeight + 28;
+    if (review.noNewStory) {
+      y += this.wrapText("你已读完当前岗位范围内的全部原创故事。本年度不重复旧事项，直接完成常规履职考核。", 32, y, this.width - 64, 24, 14, COLORS.gold) * 24 + 18;
+    }
+    (review.contributions || []).forEach((item) => {
+      this.text(`${item.label} ${item.value} × ${item.weight}%`, 36, y, 14, COLORS.muted);
+      this.text(item.score.toFixed(1), this.width - 36, y, 14, COLORS.tealDark, "right");
+      y += 27;
+    });
+    y += this.wrapText(review.accountCredit ? `年度额外入账（不计入现金）：公积金 +${review.accountCredit.housingFund.toFixed(2)} 万；职业年金 +${review.accountCredit.annuity.toFixed(2)} 万。确认结算后到账。` : "本年度沿用旧版账户规则，不补记公积金或职业年金。", 32, y + 8, this.width - 64, 24, 14, COLORS.gold) * 24 + 20;
+    if (review.childCost) y += this.wrapText(`年度支出已包含子女预算 ${review.childCost.toFixed(2)} 万，不会在翻年时重复扣款。`, 32, y, this.width - 64, 24, 14, COLORS.muted) * 24 + 16;
+    this.button(this.state.careerYear >= MAX_CAREER_YEARS ? "完成人生履历" : "翻到下一年", 32, y + 12, this.width - 64, 54, () => {
+      this.state = completeReview(this.state, EVENTS);
+      this.panel = null;
+      this.screen = "play";
+      this.scrollY = 0;
+      this.saveAndRender();
+    });
+  }
+
+  renderEnding() {
+    const ending = getEndingPresentation(this.state);
+    const role = ROLES[this.state.roleIndex];
+    this.text("履历完成", this.width / 2, 118, 15, COLORS.gold, "center", "600");
+    this.text(ending.title, this.width / 2, 166, 31, COLORS.ink, "center", "700");
+    const textWidth = this.width - 96;
+    let y = 244;
+    const descriptionHeight = this.measureWrappedLines(ending.description, textWidth, 16).length * 27;
+    const detailHeight = ending.detail ? this.measureWrappedLines(ending.detail, textWidth, 14).length * 24 + 14 : 0;
+    const storyHeight = this.measureWrappedLines(ending.story, textWidth, 14).length * 24;
+    const cardHeight = 70 + descriptionHeight + detailHeight + storyHeight + 112;
+    this.roundedRect(24, 205, this.width - 48, cardHeight, 16, COLORS.paper, COLORS.line);
+    y += this.wrapText(ending.description, 48, y, textWidth, 27, 16, COLORS.ink, "center") * 27 + 18;
+    if (ending.detail) y += this.wrapText(ending.detail, 48, y, textWidth, 24, 14, COLORS.red, "center") * 24 + 14;
+    y += this.wrapText(ending.story, 48, y, textWidth, 24, 14, COLORS.muted, "left") * 24 + 24;
+    this.text(`最终岗位 · ${role.name}`, this.width / 2, y, 15, COLORS.tealDark, "center", "600");
+    y += 31;
+    this.text(`职业 ${this.state.careerYear} 年 · 积蓄 ${this.state.assets}`, this.width / 2, y, 13, COLORS.muted, "center");
+    y += 27;
+
+重生之我是公务员的一生（游戏软件） V1.0    第 58 页
+    this.text(`重要选择 ${this.state.history.length} 次`, this.width / 2, y, 13, COLORS.muted, "center");
+    const buttonsY = 205 + cardHeight + 20;
+    this.button("回看本局履历", 32, buttonsY, this.width - 64, 44, () => {
+      this.panel = { id: "history", page: 0 };
+      this.render();
+    }, { secondary: true });
+    this.button("再写一份履历", 32, buttonsY + 54, this.width - 64, 54, () => {
+      this.screen = "background";
+      this.render();
+    });
+    this.button("回到首页", 32, buttonsY + 120, this.width - 64, 48, () => {
+      this.screen = "home";
+      this.render();
+    }, { secondary: true });
+    this.text("人物与案件均为虚构 · 不构成现实量刑说明", this.width / 2, buttonsY + 194, 10, COLORS.muted, "center");
+    this.contentHeight = Math.max(this.contentHeight, buttonsY + 220);
+  }
+
+  button(label, x, y, width, height, onPress, options = {}) {
+    this.contentHeight = Math.max(this.contentHeight, y + height + 32);
+    const secondary = Boolean(options.secondary);
+    this.roundedRect(
+      x,
+      y,
+      width,
+      height,
+      options.small ? 10 : 13,
+      secondary ? COLORS.paper : COLORS.teal,
+      secondary ? COLORS.teal : COLORS.teal
+    );
+    const color = secondary ? COLORS.tealDark : COLORS.buttonInk;
+    const size = options.small ? 13 : 15;
+    const align = options.align || "center";
+    if (align === "left") {
+      const lines = this.measureWrappedLines(label, width - 32, size);
+      const totalHeight = lines.length * (size + 4);
+      const startY = y + (height - totalHeight) / 2 + size;
+      lines.forEach((line, index) => this.text(line, x + 16, startY + index * (size + 4), size, color, "left", "600"));
+    } else {
+      this.text(label, x + width / 2, y + height / 2 + size * 0.36, size, color, "center", "600");
+    }
+    this.buttons.push({ label, x, y, width, height, onPress });
+  }
+
+  roundedRect(x, y, width, height, radius, fill, stroke) {
+    const ctx = this.context;
+    const r = Math.min(radius, width / 2, height / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + width, y, x + width, y + height, r);
+
+重生之我是公务员的一生（游戏软件） V1.0    第 59 页
+    ctx.arcTo(x + width, y + height, x, y + height, r);
+    ctx.arcTo(x, y + height, x, y, r);
+    ctx.arcTo(x, y, x + width, y, r);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  text(value, x, y, size, color, align = "left", weight = "400") {
+    const ctx = this.context;
+    ctx.font = `${weight} ${size}px sans-serif`;
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText(String(value), x, y);
+  }
+
+  measureWrappedLines(text, maxWidth, size) {
+    const ctx = this.context;
+    ctx.font = `400 ${size}px sans-serif`;
+    const lines = [];
+    let current = [];
+    // Keep money, percentages and progress fractions together on narrow screens.
+    const tokens = String(text).match(/[+−-]?\d+(?:[./]\d+)*%?|[\s\S]/g) || [];
+    tokens.forEach((character) => {
+      const candidate = current.join("") + character;
+      if (ctx.measureText(candidate).width > maxWidth && current.length) {
+        if (/^[，。！？、；：）》】”’]$/.test(character) && current.length > 1) {
+          lines.push(current.slice(0, -1).join(""));
+          current = [current[current.length - 1], character];
+        } else {
+          lines.push(current.join(""));
+          current = [character];
+        }
+      } else {
+        current.push(character);
+      }
+    });
+    if (current.length) lines.push(current.join(""));
+    return lines;
+  }
+
+  wrapText(text, x, y, maxWidth, lineHeight, size, color, align = "left") {
+    const lines = this.measureWrappedLines(text, maxWidth, size);
+    let drawX = x;
+
+重生之我是公务员的一生（游戏软件） V1.0    第 60 页
+    if (align === "center") drawX = x + maxWidth / 2;
+    lines.forEach((line, index) => this.text(line, drawX, y + index * lineHeight, size, color, align));
+    return lines.length;
+  }
+}
+
+module.exports = { GameApp };
+
+

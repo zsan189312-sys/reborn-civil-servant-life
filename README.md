@@ -24,6 +24,8 @@ npm test
 npm run check
 ```
 
+当前 `npm run check` 执行 135 项自动测试。修改源码、事件池或晋升机制后，必须重新运行 `npm run simulate`，否则 `artifacts/simulation-audit.json` 的源码指纹与测试不一致，`npm run check` 会失败。
+
 ## 立即在本机试玩
 
 ```bash
@@ -60,7 +62,7 @@ npm run preview
 
 新增三条原创利益抉择长线，占当前事件总量不足 15%：县级老同学以酒和转账请托项目、市级合作方安排“没人谈项目”的饭局、省级亲属争取分包机会。拒绝、披露或回避会承担友情、家庭和进度代价；收受、关照或隐瞒可能短期获利，但会触发复核、退回、信任损失乃至提前结束。事件只呈现冲突和后果，不提供规避监管的方法；界面标注“利益抉择 · 虚构剧情”，正式上线前仍需人工内容与分级复核。
 
-执行 `npm run simulate` 可重做 1,800 局离线模拟，并生成 `artifacts/simulation-audit.json`。18 种策略均走正式自动调任流程，9 个结局全部有可重放见证，单局具体事件重复率为 0。连续三局的跨周目重复率仍约 42.3%—45.6%，未达到 PRD 的低于 30% 复玩目标。模拟不是普通玩家留存或概率结论，详见 `docs/BALANCE_AUDIT.md`。
+执行 `npm run simulate` 可重做 1,900 局离线模拟，并生成 `artifacts/simulation-audit.json`。19 种策略均走正式自动调任流程，9 个结局全部有可重放见证，单局具体事件重复率为 0。连续三局的跨周目重复率仍是 30.3%—37.0%，高于 PRD 的低于 30% 复玩目标。模拟不是普通玩家留存或概率结论，详见 `docs/BALANCE_AUDIT.md`。
 
 工程目前采用原生 JavaScript + Canvas，无外部运行依赖。与 PRD 中最初的 Cocos/TypeScript 建议不同，详见 `docs/IMPLEMENTATION_DECISIONS.md`。
 

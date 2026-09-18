@@ -32,6 +32,13 @@ function createContext() {
   };
 }
 
+// A fresh install shows the privacy notice before anything else, so tests that
+// start from the home or background screen have to acknowledge it first.
+function dismissPrivacy(app) {
+  const ack = app.buttons.find((button) => button.label === "我已了解，开始游戏");
+  if (ack) ack.onPress();
+}
+
 function finishAnnualWork(state, engine, events) {
   let next = state;
   while (["event", "result"].includes(next.phase)) {
@@ -155,6 +162,7 @@ test("entry labels guide all backgrounds and saved phases without restarting pro
   for (const background of BACKGROUNDS) {
     stored = null;
     const app = new GameApp({ getContext: () => ctx });
+    dismissPrivacy(app);
     app.screen = "background"; app.render();
     assert.ok(painted.join("").includes("选择你的前世经历"));
     app.startGame(background.id);
@@ -530,6 +538,7 @@ test("canvas UI can start a new game and make a choice", () => {
   const canvas = { width: 0, height: 0, getContext: () => createContext() };
   const { GameApp } = require("../src/ui/app");
   const app = new GameApp(canvas);
+  dismissPrivacy(app);
 
   assert.equal(app.screen, "home");
   assert.ok(touchHandler);
@@ -623,4 +632,57 @@ test("failed storage does not crash play, and replacing a save requires confirma
   app.startGame("study");
   app.buttons.find((button) => button.label === "确认").onPress();
   assert.equal(app.state.backgroundId, "study");
+});
+
+test("foreground return repaints the open story and a window change re-fits the layout", (t) => {
+  const handlers = {};
+  let metrics = { windowWidth: 320, windowHeight: 568, pixelRatio: 2, safeArea: { top: 24, bottom: 548 } };
+  let stored = null;
+  global.wx = {
+    getWindowInfo: () => metrics,
+    getStorageSync: () => stored,
+    setStorageSync: (_key, value) => { stored = value; },
+    onTouchStart(handler) { handlers.start = handler; },
+    onTouchEnd(handler) { handlers.end = handler; },
+    onShow(handler) { handlers.show = handler; },
+    onHide(handler) { handlers.hide = handler; },
+    onWindowResize(handler) { handlers.resize = handler; }
+  };
+  t.after(() => { delete global.wx; });
+  const ctx = createContext();
+  const painted = [];
+  ctx.fillText = (value, x, y) => painted.push({ value: String(value), x, y });
+  const { GameApp } = require("../src/ui/app");
+  const app = new GameApp({ getContext: () => ctx });
+  app.startGame("community");
+  app.panel = null;
+  app.render();
+
+  assert.equal(typeof handlers.show, "function", "onShow is registered");
+  assert.equal(typeof handlers.resize, "function", "onWindowResize is registered");
+  assert.equal(app.state.phase, "event");
+  const eventId = app.state.currentEventId;
+
+  painted.length = 0;
+  handlers.show();
+  assert.ok(painted.length > 0, "returning to the foreground repainted the frame");
+  assert.equal(app.state.currentEventId, eventId, "the open story was kept");
+  assert.equal(app.screen, "play");
+
+  // A touch interrupted by backgrounding must not turn into a tap afterwards.
+  handlers.start({ touches: [{ clientX: 12, clientY: 12 }] });
+  handlers.hide();
+  painted.length = 0;
+  handlers.end({ changedTouches: [{ clientX: 12, clientY: 12 }] });
+  assert.equal(painted.length, 0, "the interrupted gesture did nothing");
+
+  // A window-metric change must re-fit the canvas and every button.
+  metrics = { windowWidth: 430, windowHeight: 932, pixelRatio: 3, safeArea: { top: 59, bottom: 898 } };
+  handlers.resize();
+  assert.equal(app.width, 430);
+  assert.equal(app.pixelRatio, 3);
+  assert.ok(app.buttons.length > 0);
+  for (const button of app.buttons) {
+    assert.ok(button.x >= 0 && button.x + button.width <= 430, button.label);
+  }
 });

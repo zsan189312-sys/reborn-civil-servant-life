@@ -43,6 +43,26 @@ const COLORS = {
 
 const TRANSFER_LABELS = { automatic: "年终组织评定", legacy: "旧版年度考核" };
 
+// 《微信小游戏运营规范》2.6.2：游戏开始前必须在画面显著位置全文登载《健康游戏忠告》。
+// The wording is fixed by the platform; do not paraphrase or shorten it.
+const HEALTH_ADVICE = "抵制不良游戏，拒绝盗版游戏。注意自我保护，谨防受骗上当。适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。";
+
+// Age rating shown before play (platform rule 11.3). Change this single value
+// if the platform requires a different band.
+const AGE_RATING = "适龄提示：本游戏适合 16 周岁以上用户";
+
+// The game collects nothing and has no network calls, so the notice states
+// that plainly instead of reusing a generic template that overstates it.
+const PRIVACY_VERSION = 1;
+const PRIVACY_NOTICE = [
+  "本游戏为单机小游戏。",
+  "收集的信息：不收集姓名、手机号、身份证号、位置、通讯录、相册、麦克风或任何个人身份信息。",
+  "使用的设备能力：仅读取屏幕尺寸与安全区用于排版，读取触摸事件用于操作，使用本机存储保存游戏进度与结局收藏。",
+  "数据存储与删除：进度仅保存在你的设备上，不上传、不联网、不与第三方共享。可在游戏内删除本地数据，或删除小游戏清除。",
+  "广告与支付：当前版本不含广告、充值或任何交易。将来若接入，将只使用平台官方能力，并在接入前更新本说明。",
+  "未成年人：请结合适龄提示合理安排游戏时间。"
+];
+
 const CAREER_STAGES = [
   "基层起步", "基层历练", "副科履新", "副科历练", "正科主政",
   "县处历练", "市级主政", "厅局履新", "厅局主政", "综合领导", "全局协调"
@@ -97,23 +117,14 @@ class GameApp {
   constructor(canvas) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
-    this.metrics = platform.getWindowMetrics();
-    this.width = this.metrics.width;
-    this.viewportHeight = this.metrics.height;
-    this.topInset = (this.metrics.safeArea ? this.metrics.safeArea.top : 0) + 44;
-    this.bottomInset = this.metrics.safeArea ? Math.max(0, this.viewportHeight - this.metrics.safeArea.bottom) : 0;
-    this.height = Math.max(708, this.viewportHeight - this.topInset - this.bottomInset);
     this.scrollY = 0;
-    this.contentHeight = this.height;
     this.panel = null;
     this.notice = "";
-    this.pixelRatio = this.metrics.pixelRatio;
-    this.canvas.width = Math.round(this.width * this.pixelRatio);
-    this.canvas.height = Math.round(this.viewportHeight * this.pixelRatio);
-    this.context.scale(this.pixelRatio, this.pixelRatio);
     this.buttons = [];
     this.screen = "home";
     this.state = null;
+    this.gesture = null;
+    this.applyMetrics();
     this.savedGame = platform.loadGame();
     this.archive = platform.loadArchive();
     if (!validateSavedGame(this.savedGame)) {
@@ -134,12 +145,48 @@ class GameApp {
           : pacingRepaired ? "旧存档已切换为一年一个主故事。" : "旧存档已更新。";
       }
     }
+    this.settings = platform.loadSettings();
+    // Douyin rule 11.3 and the general privacy requirement: the notice must be
+    // shown before play, once per device (and again if the wording changes).
+    if (this.settings.privacyVersion !== PRIVACY_VERSION) this.panel = { id: "privacy" };
     platform.setPreferredFramesPerSecond(30);
     platform.onTouchStart((event) => this.handleTouch(event));
     platform.onTouchMove((event) => this.handleMove(event));
     platform.onTouchEnd((event) => this.handleEnd(event));
     platform.onTouchCancel(() => { this.gesture = null; });
+    // Returning to the foreground or a window-metric change can leave a stale
+    // or blank frame (and can move the safe area) while a story is open.
+    platform.onShow(() => this.handleResume());
+    platform.onWindowResize(() => this.handleResume());
+    platform.onHide(() => { this.gesture = null; });
     this.render();
+  }
+
+  // Re-read the device metrics and resize the backing canvas. Assigning
+  // canvas.width also resets the 2D transform, so the pixel-ratio scale is
+  // applied exactly once per call.
+  applyMetrics() {
+    this.metrics = platform.getWindowMetrics();
+    this.width = this.metrics.width;
+    this.viewportHeight = this.metrics.height;
+    this.topInset = (this.metrics.safeArea ? this.metrics.safeArea.top : 0) + 44;
+    this.bottomInset = this.metrics.safeArea ? Math.max(0, this.viewportHeight - this.metrics.safeArea.bottom) : 0;
+    this.height = Math.max(708, this.viewportHeight - this.topInset - this.bottomInset);
+    this.pixelRatio = this.metrics.pixelRatio;
+    this.canvas.width = Math.round(this.width * this.pixelRatio);
+    this.canvas.height = Math.round(this.viewportHeight * this.pixelRatio);
+    this.context.scale(this.pixelRatio, this.pixelRatio);
+    this.contentHeight = this.height;
+  }
+
+  handleResume() {
+    // Drop any half-finished gesture so a touch interrupted by backgrounding
+    // cannot register as a tap after the player comes back.
+    this.gesture = null;
+    this.applyMetrics();
+    this.render();
+    const clamped = Math.max(0, Math.min(this.scrollY, this.maxScroll()));
+    if (clamped !== this.scrollY) { this.scrollY = clamped; this.render(); }
   }
 
   handleTouch(event) {
@@ -259,6 +306,7 @@ class GameApp {
     if (this.panel.id === "promotion") { this.renderPromotionPanel(); return; }
     if (this.panel.id === "accounts") { this.renderAccountsPanel(); return; }
     if (this.panel.id === "collection") { this.renderCollection(); return; }
+    if (this.panel.id === "privacy") { this.renderPrivacy(); return; }
     if (this.panel.id === "confirm") {
       const lines = this.wrapText(this.panel.message, 28, 148, this.width - 56, 28, 17, COLORS.ink);
       const confirmY = Math.max(266, 148 + lines * 28 + 24);
@@ -791,29 +839,64 @@ class GameApp {
       COLORS.muted
     );
 
-    const firstY = this.savedGame ? 385 : 410;
+    // 《健康游戏忠告》must be legible before the game starts, so it sits
+    // directly above the entry buttons instead of below the fold.
+    const adviceTop = 358;
+    const adviceLines = this.measureWrappedLines(HEALTH_ADVICE, this.width - 84, 11).length;
+    const adviceHeight = 36 + adviceLines * 17 + 22;
+    this.roundedRect(28, adviceTop, this.width - 56, adviceHeight, 12, COLORS.paper, COLORS.line);
+    this.text("健康游戏忠告", 42, adviceTop + 20, 12, COLORS.gold, "left", "600");
+    this.wrapText(HEALTH_ADVICE, 42, adviceTop + 38, this.width - 84, 17, 11, COLORS.muted);
+    this.text(AGE_RATING, 42, adviceTop + 38 + adviceLines * 17 + 4, 11, COLORS.tealDark, "left", "600");
+
+    let firstY = adviceTop + adviceHeight + 20;
     if (this.savedGame) {
       const role = ROLES[this.savedGame.roleIndex];
-      this.text(role.name, centerX, firstY - 11, 13, COLORS.gold, "center", "600");
-      this.button(`继续第 ${this.savedGame.careerYear} 年`, 34, firstY, this.width - 68, 54, () => this.continueGame());
-      this.button("开始新的履历", 34, firstY + 68, this.width - 68, 50, () => {
+      this.text(role.name, centerX, firstY + 11, 13, COLORS.gold, "center", "600");
+      this.button(`继续第 ${this.savedGame.careerYear} 年`, 34, firstY + 24, this.width - 68, 54, () => this.continueGame());
+      this.button("开始新的履历", 34, firstY + 92, this.width - 68, 50, () => {
         this.screen = "background";
         this.render();
       }, { secondary: true });
+      firstY += 142;
     } else {
-      this.button("重回录用那一年", 34, firstY, this.width - 68, 56, () => {
+      this.button("重回录用那一年", 34, firstY + 24, this.width - 68, 56, () => {
         this.screen = "background";
         this.render();
       });
+      firstY += 88;
     }
 
-    this.button(`结局收藏 · ${new Set(this.archive.map((item) => item.endingId)).size} / ${ENDINGS.length}`, 34, 536, this.width - 68, 48, () => {
+    const collectionY = firstY + 14;
+    this.button(`结局收藏 · ${new Set(this.archive.map((item) => item.endingId)).size} / ${ENDINGS.length}`, 34, collectionY, this.width - 68, 48, () => {
       this.panel = { id: "collection" };
       this.render();
     }, { secondary: true });
 
-    this.text("内部原型 · 本地存档 · 无广告与充值", centerX, this.height - 42, 11, COLORS.muted, "center");
-    this.text("人物剧情虚构 · 多部门履历 · 游戏化调任", centerX, this.height - 23, 11, COLORS.muted, "center");
+    const footerTop = collectionY + 62;
+    this.text("内部原型 · 本地存档 · 无广告与充值", centerX, footerTop, 11, COLORS.muted, "center");
+    this.text("人物剧情虚构 · 多部门履历 · 游戏化调任", centerX, footerTop + 19, 11, COLORS.muted, "center");
+    // The advice block can push the footer past a short viewport; let it scroll.
+    this.contentHeight = Math.max(this.height, footerTop + 44);
+  }
+
+  // First-run privacy notice. The game collects nothing, so this is a plain
+  // disclosure rather than a consent gate that blocks play.
+  renderPrivacy() {
+    this.text("隐私说明", 24, 122, 22, COLORS.ink, "left", "600");
+    let y = 160;
+    PRIVACY_NOTICE.forEach((line) => {
+      const lines = this.wrapText(line, 28, y, this.width - 56, 22, 13, COLORS.muted);
+      y += lines * 22 + 10;
+    });
+    const buttonY = Math.max(320, y + 18);
+    this.button("我已了解，开始游戏", 28, buttonY, this.width - 56, 54, () => {
+      this.settings = { ...this.settings, privacyVersion: PRIVACY_VERSION };
+      platform.saveSettings(this.settings);
+      this.panel = null;
+      this.render();
+    });
+    this.contentHeight = Math.max(this.height, buttonY + 74);
   }
 
   renderBackgrounds() {
@@ -935,13 +1018,20 @@ class GameApp {
     if (!event) return;
     const top = 206;
     const body = compactNarrative(event.body, 82);
+    // Long story titles are authored in natural language. Drawing them on one
+    // line overflowed narrow (320px) screens, so titles now scale down and
+    // wrap, and the card grows to fit the measured title height.
+    const titleSize = event.title.length > 16 ? 19 : event.title.length > 12 ? 21 : 23;
+    const titleLineHeight = titleSize + 5;
+    const titleLines = this.measureWrappedLines(event.title, this.width - 68, titleSize).length;
     const bodyLines = this.measureWrappedLines(body, this.width - 68, 15).length;
-    const cardHeight = Math.max(208, 92 + bodyLines * 25 + 14);
+    const bodyTop = top + 60 + titleLines * titleLineHeight + 6;
+    const cardHeight = Math.max(208, (bodyTop - top) + bodyLines * 25 + 14);
     this.roundedRect(16, top, this.width - 32, cardHeight, 15, COLORS.paper, COLORS.line);
     const categoryLabel = event.contentTag || { work: "工作事项", life: "生活片段", city: "城市事件", integrity: "廉洁考察", assessment: "旧版考察收尾" }[event.category];
     this.text(categoryLabel, 34, top + 28, 12, COLORS.gold, "left", "600");
-    this.text(event.title, 34, top + 60, 23, COLORS.ink, "left", "700");
-    this.wrapText(body, 34, top + 92, this.width - 68, 25, 15, COLORS.ink);
+    this.wrapText(event.title, 34, top + 60, this.width - 68, titleLineHeight, titleSize, COLORS.ink);
+    this.wrapText(body, 34, bodyTop, this.width - 68, 25, 15, COLORS.ink);
 
     let y = top + cardHeight + 20;
     const previous = event.afterEvent && this.state.history.slice().reverse().find((item) => item.eventId === event.afterEvent.id);

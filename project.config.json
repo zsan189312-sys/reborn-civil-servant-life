@@ -30,7 +30,15 @@
   },
   "simulatorPluginLibVersion": {},
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      { "type": "folder", "value": "docs" },
+      { "type": "folder", "value": "tests" },
+      { "type": "folder", "value": "scripts" },
+      { "type": "folder", "value": "artifacts" },
+      { "type": "file", "value": "package.json" },
+      { "type": "file", "value": "README.md" },
+      { "type": "file", "value": "PRD-一纸履历.md" }
+    ],
     "include": []
   },
   "isGameTourist": false,
